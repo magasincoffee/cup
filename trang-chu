@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAGASIN CUP - Xưởng In Ly Nhựa Cần Thơ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #e8f5e9;
+        }
+
+        /* Header & Navigation */
+        header {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+        }
+
+        .logo {
+            padding: 15px 0;
+        }
+
+        .logo h1 {
+            color: #c62828;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+
+        nav {
+            display: flex;
+            gap: 0;
+        }
+
+        nav a {
+            padding: 25px 20px;
+            text-decoration: none;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        nav a:hover, nav a.active {
+            background: #8bc34a;
+            color: white;
+            border-bottom: 3px solid #689f38;
+        }
+
+        .lang-switcher {
+            display: flex;
+            gap: 10px;
+        }
+
+        .lang-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid #8bc34a;
+            background: white;
+            color: #8bc34a;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .lang-btn.active {
+            background: #8bc34a;
+            color: white;
+        }
+
+        /* Banner Section */
+        .banner {
+            background: linear-gradient(135deg, #8bc34a 0%, #689f38 100%);
+            color: white;
+            padding: 60px 30px;
+            text-align: center;
+        }
+
+        .banner h2 {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+
+        .banner p {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+
+        /* Filter Section */
+        .filter-section {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 30px;
+        }
+
+        .search-filter {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-filter input {
+            flex: 1;
+            min-width: 250px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .search-filter select {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            min-width: 200px;
+            cursor: pointer;
+        }
+
+        /* Products Grid */
+        .products-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 30px;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 350px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-image::before {
+            content: '🥤';
+            font-size: 120px;
+            opacity: 0.3;
+        }
+
+        .product-logo {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(255,255,255,0.9);
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #c62828;
+            font-size: 0.9em;
+        }
+
+        .product-badges {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 0.7em;
+            font-weight: bold;
+            color: #666;
+        }
+
+        .product-info {
+            padding: 20px;
+        }
+
+        .product-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .product-specs {
+            color: #888;
+            font-size: 0.9em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .product-price {
+            text-align: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #8bc34a;
+            margin: 15px 0;
+        }
+
+        .product-desc {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-top: 10px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: white;
+            max-width: 900px;
+            margin: 50px auto;
+            border-radius: 10px;
+            position: relative;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            padding: 40px;
+            background: #8bc34a;
+            color: white;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .modal-header h2 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }
+
+        .modal-header .price {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 2.5em;
+            color: white;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .modal-body {
+            padding: 40px;
+        }
+
+        .detail-section {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .detail-section:last-child {
+            border-bottom: none;
+        }
+
+        .detail-section h3 {
+            color: #8bc34a;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .detail-section p {
+            color: #555;
+            line-height: 1.8;
+            font-size: 1.1em;
+        }
+
+        .detail-section ul {
+            margin-left: 20px;
+            color: #555;
+            line-height: 1.8;
+        }
+
+        /* Footer */
+        footer {
+            background: #2c3e50;
+            color: white;
+            padding: 50px 30px 30px;
+            margin-top: 60px;
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+        }
+
+        .footer-section h3 {
+            color: #8bc34a;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .footer-section p, .footer-section a {
+            color: #ecf0f1;
+            line-height: 2;
+            text-decoration: none;
+            display: block;
+        }
+
+        .footer-section a:hover {
+            color: #8bc34a;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #34495e;
+            color: #95a5a6;
+        }
+
+        /* Floating Action Buttons */
+        .fab-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 99;
+        }
+
+        .fab {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #8bc34a;
+            color: white;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            background: #689f38;
+        }
+
+        .fab.contact {
+            background: #f44336;
+        }
+
+        @media (max-width: 768px) {
+            .header-container {
+                flex-wrap: wrap;
+                padding: 0 15px;
+            }
+
+            nav {
+                width: 100%;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+
+            nav a {
+                padding: 15px;
+                font-size: 0.85em;
+                white-space: nowrap;
+            }
+
+            .banner h2 {
+                font-size: 1.8em;
+            }
+
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                margin: 20px;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <h1>MAGASIN CUP</h1>
+                <p>Xưởng In Ly Nhựa - Cần Thơ</p>
+            </div>
+            <nav>
+                <a href="#gioi-thieu">GIỚI THIỆU</a>
+                <a href="#cong-nghe">CÔNG NGHỆ</a>
+                <a href="#san-pham" class="active">SẢN PHẨM</a>
+                <a href="#bang-gia">BẢNG GIÁ</a>
+                <a href="#tin-tuc">TIN TỨC</a>
+                <a href="#lien-he">LIÊN HỆ</a>
+            </nav>
+            <div class="lang-switcher">
+                <button class="lang-btn active">VN</button>
+                <button class="lang-btn">EN</button>
+            </div>
+        </div>
+    </header>
+
+    <section class="banner">
+        <h2>🥤 Danh Mục Sản Phẩm Ly Nhựa</h2>
+        <p>Chất lượng cao - Giá cạnh tranh - Giao hàng nhanh chóng</p>
+    </section>
+
+    <div class="filter-section">
+        <div class="search-filter">
+            <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm sản phẩm..." onkeyup="filterProducts()">
+            <select id="categoryFilter" onchange="filterProducts()">
+                <option value="">Tất cả loại ly</option>
+                <option value="pp">Ly PP (Polypropylene)</option>
+                <option value="pet">Ly PET (Polyethylene)</option>
+                <option value="ps">Ly PS (Polystyrene)</option>
+            </select>
+            <select id="capacityFilter" onchange="filterProducts()">
+                <option value="">Tất cả dung tích</option>
+                <option value="500">500ml</option>
+                <option value="700">700ml</option>
+                <option value="1000">1000ml</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="products-container">
+        <div class="products-grid" id="productsGrid"></div>
+    </div>
+
+    <div class="modal" id="productModal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>MAGASIN CUP</h3>
+                <p>Chuyên sản xuất và in ấn ly nhựa các loại với chất lượng cao, giá cả cạnh tranh.</p>
+                <p style="margin-top: 20px;">
+                    <strong>Chứng nhận:</strong><br>
+                    ✓ ISO 9001:2015<br>
+                    ✓ SGS Food Safety<br>
+                    ✓ FSC Certified
+                </p>
+            </div>
+            <div class="footer-section">
+                <h3>Liên Hệ</h3>
+                <p>📍 Địa chỉ: Cần Thơ, Việt Nam</p>
+                <p>📱 Hotline: 0123 456 789</p>
+                <p>📞 Tel: 0292 123 4567</p>
+                <p>📧 Email: contact@magasincup.vn</p>
+                <p>🌐 Website: www.magasincup.vn</p>
+            </div>
+            <div class="footer-section">
+                <h3>Sản Phẩm</h3>
+                <a href="#">Ly nhựa PP</a>
+                <a href="#">Ly nhựa PET</a>
+                <a href="#">Ly nhựa PS</a>
+                <a href="#">Nắp ly các loại</a>
+                <a href="#">Ống hút sinh học</a>
+                <a href="#">In ấn theo yêu cầu</a>
+            </div>
+            <div class="footer-section">
+                <h3>Hỗ Trợ</h3>
+                <a href="#">Hướng dẫn đặt hàng</a>
+                <a href="#">Chính sách bảo hành</a>
+                <a href="#">Chính sách đổi trả</a>
+                <a href="#">Phương thức thanh toán</a>
+                <a href="#">Vận chuyển & Giao nhận</a>
+                <a href="#">Câu hỏi thường gặp</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 MAGASIN CUP - Xưởng In Ly Nhựa Cần Thơ. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <div class="fab-container">
+        <button class="fab" onclick="scrollToTop()" title="Lên đầu trang">↑</button>
+        <button class="fab contact" onclick="contactUs()" title="Liên hệ ngay">💬</button>
+    </div>
+
+    <script>
+        // Dữ liệu sản phẩm mẫu
+        const productsData = [
+            {
+                name: "UKP90-700PP-R-M",
+                category: "pp",
+                capacity: "700",
+                price: "1.850.000đ",
+                specs: "Dung tích: 700ml | Chất liệu: PP | Màu: Trắng mờ",
+                description: "Ly nhựa PP 700ml chất lượng cao, an toàn thực phẩm, chịu nhiệt tốt",
+                printSpecs: "In offset 4 màu, in lụa, in nhiệt",
+                notes: "Đặt hàng tối thiểu 5.000 ly"
+            },
+            {
+                name: "UKP90-500PP-R-M",
+                category: "pp",
+                capacity: "500",
+                price: "1.650.000đ",
+                specs: "Dung tích: 500ml | Chất liệu: PP | Màu: Trắng mờ",
+                description: "Ly nhựa PP 500ml phổ biến nhất, phù hợp cho trà sữa, nước ép",
+                printSpecs: "In offset 4 màu, in lụa, in nhiệt",
+                notes: "Đặt hàng tối thiểu 5.000 ly"
+            },
+            {
+                name: "UKP90-700PP-R",
+                category: "pp",
+                capacity: "700",
+                price: "1.750.000đ",
+                specs: "Dung tích: 700ml | Chất liệu: PP | Màu: Trong suốt",
+                description: "Ly nhựa PP 700ml trong suốt, thể hiện màu sắc đồ uống tự nhiên",
+                printSpecs: "In offset 4 màu, in lụa",
+                notes: "Đặt hàng tối thiểu 5.000 ly"
+            },
+            {
+                name: "UKP90-500PP-R",
+                category: "pp",
+                capacity: "500",
+                price: "1.550.000đ",
+                specs: "Dung tích: 500ml | Chất liệu: PP | Màu: Trong suốt",
+                description: "Ly nhựa PP 500ml trong suốt, thiết kế tinh tế",
+                printSpecs: "In offset 4 màu, in lụa",
+                notes: "Đặt hàng tối thiểu 5.000 ly"
+            },
+            {
+                name: "UKP95-700PET-R",
+                category: "pet",
+                capacity: "700",
+                price: "2.100.000đ",
+                specs: "Dung tích: 700ml | Chất liệu: PET | Màu: Trong suốt",
+                description: "Ly nhựa PET 700ml cao cấp, độ cứng cao, trong suốt hoàn hảo",
+                printSpecs: "In offset 6 màu, in nhiệt chuyển",
+                notes: "Đặt hàng tối thiểu 3.000 ly"
+            },
+            {
+                name: "UKP95-500PET-R",
+                category: "pet",
+                capacity: "500",
+                price: "1.900.000đ",
+                specs: "Dung tích: 500ml | Chất liệu: PET | Màu: Trong suốt",
+                description: "Ly nhựa PET 500ml cao cấp, độ bền tốt, an toàn tuyệt đối",
+                printSpecs: "In offset 6 màu, in nhiệt chuyển",
+                notes: "Đặt hàng tối thiểu 3.000 ly"
+            },
+            {
+                name: "UKP85-1000PS-M",
+                category: "ps",
+                capacity: "1000",
+                price: "2.250.000đ",
+                specs: "Dung tích: 1000ml | Chất liệu: PS | Màu: Trắng mờ",
+                description: "Ly nhựa PS 1000ml size lớn, phù hợp cho đồ uống có nhiều topping",
+                printSpecs: "In offset 4 màu, in lụa",
+                notes: "Đặt hàng tối thiểu 3.000 ly"
+            },
+            {
+                name: "UKP85-700PS-M",
+                category: "ps",
+                capacity: "700",
+                price: "1.950.000đ",
+                specs: "Dung tích: 700ml | Chất liệu: PS | Màu: Trắng mờ",
+                description: "Ly nhựa PS 700ml phổ biến, giá thành hợp lý",
+                printSpecs: "In offset 4 màu, in lụa",
+                notes: "Đặt hàng tối thiểu 5.000 ly"
+            },
+            {
+                name: "UKP90-700PP-DOME",
+                category: "pp",
+                capacity: "700",
+                price: "2.050.000đ",
+                specs: "Dung tích: 700ml | Chất liệu: PP | Nắp: Dome",
+                description: "Ly nhựa PP 700ml kèm nắp dome cao cấp, phù hợp cho smoothie",
+                printSpecs: "In offset 4 màu, in lụa, in nhiệt",
+                notes: "Đặt hàng tối thiểu 3.000 ly (bao gồm nắp)"
+            },
+            {
+                name: "UKP95-500PET-SQUARE",
+                category: "pet",
+                capacity: "500",
+                price: "2.200.000đ",
+                specs: "Dung tích: 500ml | Chất liệu: PET | Hình dạng: Vuông",
+                description: "Ly nhựa PET 500ml thiết kế vuông độc đáo, nổi bật",
+                printSpecs: "In offset 6 màu, in nhiệt chuyển",
+                notes: "Đặt hàng tối thiểu 2.000 ly"
+            },
+            {
+                name: "UKP90-1000PP-JUMBO",
+                category: "pp",
+                capacity: "1000",
+                price: "2.450.000đ",
+                specs: "Dung tích: 1000ml | Chất liệu: PP | Size: Jumbo",
+                description: "Ly nhựa PP 1000ml size jumbo, phù hợp cho đồ uống chia sẻ",
+                printSpecs: "In offset 4 màu, in lụa",
+                notes: "Đặt hàng tối thiểu 2.000 ly"
+            },
+            {
+                name: "UKP85-500PS-ECO",
+                category: "ps",
+                capacity: "500",
+                price: "1.750.000đ",
+                specs: "Dung tích: 500ml | Chất liệu: PS Eco | Thân thiện môi trường",
+                description: "Ly nhựa PS 500ml thân thiện môi trường, có thể tái chế",
+                printSpecs: "In offset 4 màu",
+                notes: "Đặt hàng tối thiểu 5.000 ly"
+            }
+        ];
+
+        let filteredProducts = [...productsData];
+
+        function displayProducts(products) {
+            const container = document.getElementById('productsGrid');
+            
+            if (products.length === 0) {
+                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #999;">Không tìm thấy sản phẩm phù hợp</div>';
+                return;
+            }
+
+            let html = '';
+            products.forEach((product, index) => {
+                html += `
+                    <div class="product-card" onclick="showDetails(${productsData.indexOf(product)})">
+                        <div class="product-image">
+                            <div class="product-logo">MAGASIN</div>
+                            <div class="product-badges">
+                                <span class="badge">SGS</span>
+                                <span class="badge">ISO</span>
+                                <span class="badge">FSC</span>
+                            </div>
+                        </div>
+                        <div class="product-info">
+                            <div class="product-name">${product.name}</div>
+                            <div class="product-specs">${product.specs}</div>
+                            <div class="product-price">${product.price}</div>
+                            <div class="product-desc">${product.description}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function filterProducts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            const capacity = document.getElementById('capacityFilter').value;
+
+            filteredProducts = productsData.filter(product => {
+                const matchSearch = product.name.toLowerCase().includes(searchTerm) ||
+                                  product.description.toLowerCase().includes(searchTerm) ||
+                                  product.specs.toLowerCase().includes(searchTerm);
+                const matchCategory = !category || product.category === category;
+                const matchCapacity = !capacity || product.capacity === capacity;
+                
+                return matchSearch && matchCategory && matchCapacity;
+            });
+
+            displayProducts(filteredProducts);
+        }
+
+        function showDetails(index) {
+            const product = productsData[index];
+            const modal = document.getElementById('productModal');
+            const modalContent = document.getElementById('modalContent');
+
+            modalContent.innerHTML = `
+                <div class="modal-header">
+                    <h2>${product.name}</h2>
+                    <div class="product-specs" style="color: rgba(255,255,255,0.9); font-size: 1.1em; margin: 10px 0;">${product.specs}</div>
+                    <div class="price">${product.price}</div>
+                </div>
+                <div class="modal-body">
+                    <div class="detail-section">
+                        <h3>📝 Mô tả sản phẩm</h3>
+                        <p>${product.description}</p>
+                    </div>
+                    <div class="detail-section">
+                        <h3>🔧 Thông số kỹ thuật</h3>
+                        <p>${product.specs}</p>
+                    </div>
+                    <div class="detail-section">
+                        <h3>🖨️ Quy cách in ấn</h3>
+                        <p>${product.printSpecs}</p>
+                    </div>
+                    <div class="detail-section">
+                        <h3>⚠️ Ghi chú quan trọng</h3>
+                        <p>${product.notes}</p>
+                    </div>
+                    <div class="detail-section">
+                        <h3>📞 Liên hệ đặt hàng</h3>
+                        <p>📍 <strong>Địa chỉ:</strong> Cần Thơ, Việt Nam</p>
+                        <p>📱 <strong>Hotline:</strong> 0123 456 789</p>
+                        <p>📞 <strong>Tel:</strong> 0292 123 4567</p>
+                        <p>📧 <strong>Email:</strong> contact@magasincup.vn</p>
+                    </div>
+                </div>
+            `;
+
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('productModal').style.display = 'none';
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function contactUs() {
+            alert('📞 Liên hệ đặt hàng:\n\n📱 Hotline: 0123 456 789\n📞 Tel: 0292 123 4567\n📧 Email: contact@magasincup.vn\n📍 Địa chỉ: Cần Thơ, Việt Nam');
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('productModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Hiển thị sản phẩm khi tải trang
+        displayProducts(productsData);
+    </script>
+</body>
+</html>
