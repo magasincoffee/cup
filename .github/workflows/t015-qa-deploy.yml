@@ -1,0 +1,56 @@
+name: MAGASIN CUP T015 Owner QA clasp deployment
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/t015-qa-deploy.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Choose read-only preflight or explicit QA deploy
+        type: choice
+        required: true
+        default: preflight
+        options: [preflight, deploy]
+      confirm:
+        description: For deploy only enter T015_QA_APPROVED
+        type: string
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: cup-t015-google-owner-qa
+  cancel-in-progress: false
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check ci/t015/run-clasp.mjs
+      - run: node ci/t015/test_t015_order_triage.cjs
+      - run: node ci/t015/test-qa-patch.mjs
+  owner-qa:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: syntax
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    environment: cup-t015-qa
+    env:
+      MODE: ${{ inputs.mode }}
+      CONFIRM: ${{ inputs.confirm }}
+      CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install -g --ignore-scripts @google/clasp@3.4.1
+      - name: Preflight or separately authorized QA deployment
+        run: node ci/t015/run-clasp.mjs
