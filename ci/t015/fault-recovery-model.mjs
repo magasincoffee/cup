@@ -54,7 +54,7 @@ export class FaultLab {
     // Replay must be read-only, even when writes are closed; identity must match.
     const past=this.journal.get(requestId);
     if(past){
-      assert(past.payloadHash===payloadHash,'IDEMPOTENCY_PAYLOAD_CONFLICT');
+      assert(past.payloadHash===payloadHash && past.type===type && past.qty===qty && past.resId===resId,'IDEMPOTENCY_PAYLOAD_CONFLICT');
       assert(past.state==='COMMITTED','UNRESOLVED_REPLAY_DENIED');
       return {replay:true,requestId,proof:clone(past.after)};
     }
