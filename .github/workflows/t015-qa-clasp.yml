@@ -1,5 +1,10 @@
 name: MAGASIN CUP T015 isolated QA clasp
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/t015-qa-clasp.yml'
+      - 'ci/t015/**'
   pull_request:
     paths:
       - '.github/workflows/t015-qa-clasp.yml'
