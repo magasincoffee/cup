@@ -106,7 +106,8 @@ jobs:
           NODE
       - name: Preflight without any Google mutation
         if: inputs.mode == 'preflight'
-        run: echo 'PASS: no push and no deployment created'
+        run: |
+          echo 'PASS: no push and no deployment created'
       - name: Push candidate to isolated QA only
         if: inputs.mode == 'deploy'
         shell: bash
