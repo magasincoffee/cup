@@ -1,0 +1,139 @@
+name: MAGASIN CUP T015 isolated QA clasp
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/t015-qa-clasp.yml'
+      - 'ci/t015/**'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: QA preflight or explicit deploy
+        required: true
+        type: choice
+        default: preflight
+        options: [preflight, deploy]
+      confirm:
+        description: For deploy enter T015_QA_APPROVED
+        required: false
+        type: string
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: cup-t015-owner-qa
+  cancel-in-progress: false
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node ci/t015/test_t015_order_triage.cjs
+      - run: node ci/t015/test-qa-patch.mjs
+      - run: node --check ci/t015/T015_OrderTriage.js && node --check ci/t015/patch-qa.mjs
+  qa:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    environment: cup-t015-qa
+    env:
+      SCRIPT_ID: 1N6gLsSpcfsumKUfnY-VIpy2p1KtfrGI6PE1MZ8HXYIZecDjYcwP72QnF
+      CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+      BASE_DIR: ${{ runner.temp }}/cup-t015-v3
+      HEAD_DIR: ${{ runner.temp }}/cup-t015-current
+      MODE: ${{ inputs.mode }}
+      CONFIRM: ${{ inputs.confirm }}
+    steps:
+      - name: Require manual authorized QA intent
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$MODE" != 'preflight' && "$MODE" != 'deploy' ]]; then exit 1; fi
+          if [[ "$MODE" == 'deploy' && "$CONFIRM" != 'T015_QA_APPROVED' ]]; then
+            echo 'QA deployment blocked: confirmation mismatch' >&2; exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned clasp
+        run: npm install -g --ignore-scripts @google/clasp@3.4.1
+      - name: Restore protected Owner OAuth secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          if [[ -z "${CLASPRC_JSON:-}" ]]; then echo 'Missing CLASPRC_JSON' >&2; exit 1; fi
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          node -e 'JSON.parse(require("fs").readFileSync(process.env.HOME+"/.clasprc.json","utf8"));console.log("OAuth secret JSON checked")'
+      - name: Pull immutable @3 and live HEAD to ephemeral folders
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$BASE_DIR" "$HEAD_DIR"
+          node -e 'const fs=require("fs");for(const k of ["BASE_DIR","HEAD_DIR"])fs.writeFileSync(process.env[k]+"/.clasp.json",JSON.stringify({scriptId:process.env.SCRIPT_ID}));'
+          (cd "$BASE_DIR" && clasp pull --versionNumber 3)
+          (cd "$HEAD_DIR" && clasp pull)
+      - name: Verify HEAD equals @3 and patch Owner-only QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          node ci/t015/patch-qa.mjs "$HEAD_DIR" "$BASE_DIR"
+          node - <<'NODE'
+          const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+          const dir=process.env.HEAD_DIR;
+          for(const f of fs.readdirSync(dir).filter(x=>x.endsWith('.js')))
+            new vm.Script(fs.readFileSync(path.join(dir,f),'utf8'),{filename:f});
+          const h=fs.readFileSync(path.join(dir,'T015_ReadOnly.html'),'utf8');
+          const b=[...h.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+          if(b.length!==1)throw Error('QA HTML source layout changed');
+          new vm.Script(b[0][1]);
+          if(!h.includes('v7T015OrderTriageQA()'))throw Error('Missing QA triage endpoint');
+          console.log('QA only source gate PASS');
+          NODE
+      - name: Preflight without any Google mutation
+        if: inputs.mode == 'preflight'
+        run: echo 'PASS: no push and no deployment created'
+      - name: Push candidate to isolated QA only
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$HEAD_DIR"
+          clasp push --force
+      - name: Re-read pushed source and compare hashes
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify="$RUNNER_TEMP/t015-readback"
+          mkdir -p "$verify"
+          node -e 'require("fs").writeFileSync(process.argv[1],JSON.stringify({scriptId:process.env.SCRIPT_ID}))' "$verify/.clasp.json"
+          (cd "$verify" && clasp pull)
+          node - "$HEAD_DIR" "$verify" <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const [a,b]=process.argv.slice(2);
+          const files=d=>fs.readdirSync(d).filter(x=>/\.(js|html|json)$/.test(x)&&x!=='.clasp.json').sort();
+          if(JSON.stringify(files(a))!==JSON.stringify(files(b)))throw Error('Unexpected remote files');
+          const hash=(d,f)=>crypto.createHash('sha256').update(fs.readFileSync(path.join(d,f))).digest('hex');
+          for(const f of files(a))if(hash(a,f)!==hash(b,f))throw Error('Readback mismatch '+f);
+          console.log('QA source readback PASS: '+files(a).length+' files');
+          NODE
+      - name: Create new immutable QA deployment
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$HEAD_DIR"
+          clasp create-deployment --description 'T015 Owner QA triage via GitHub Actions — NOT PRODUCTION'
+      - name: Remove ephemeral Owner OAuth secret
+        if: always()
+        run: rm -f "$HOME/.clasprc.json"

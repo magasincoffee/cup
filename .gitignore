@@ -1,0 +1,10 @@
+# Never check Google OAuth, project mapping, or local test credentials into this public repo.
+.clasprc.json
+.clasp.json
+**/.clasprc.json
+**/.clasp.json
+client_secret*.json
+**/client_secret*.json
+node_modules/
+.env
+.env.*
