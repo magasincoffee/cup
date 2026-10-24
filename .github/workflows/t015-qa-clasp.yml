@@ -23,4 +23,6 @@ jobs:
           node-version: '22'
       - run: node ci/t015/test_t015_order_triage.cjs
       - run: node ci/t015/test-qa-patch.mjs
+      - run: node --test ci/t015/fault-recovery.test.mjs
+      - run: node --check ci/t015/fault-recovery-model.mjs
       - run: node --check ci/t015/patch-qa.mjs
