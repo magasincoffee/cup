@@ -16,9 +16,21 @@ gate(process.env.GITHUB_EVENT_NAME==='workflow_dispatch','MANUAL_TRIGGER_ONLY');
 gate(process.env.GITHUB_REF==='refs/heads/main','MAIN_ONLY');
 gate(['preflight','deploy'].includes(MODE),'INVALID_MODE');
 if(MODE==='deploy')gate(CONFIRM==='T015_QA_APPROVED','DEPLOY_NOT_APPROVED');
-const credential=process.env.CLASPRC_JSON||'';
-gate(credential.trim().length>50,'CLASPRC_JSON_NOT_SET');
-JSON.parse(credential);
+const credential=(process.env.CLASPRC_JSON||'').trim();
+gate(credential.length>0,'CLASPRC_JSON_EMPTY_OR_NOT_ACCESSIBLE');
+gate(credential.length>50,'CLASPRC_JSON_VALUE_TOO_SHORT');
+let credentialObject;
+try { credentialObject=JSON.parse(credential); }
+catch (_) { throw Error('T015_QA_CI_GATE: CLASPRC_JSON_INVALID_JSON'); }
+gate(credentialObject&&typeof credentialObject==='object'&&!Array.isArray(credentialObject),
+  'CLASPRC_JSON_NOT_A_CREDENTIAL_OBJECT');
+const hasV3=credentialObject.tokens&&typeof credentialObject.tokens==='object'&&
+ Object.values(credentialObject.tokens).some(x=>x&&typeof x==='object'&&
+ (typeof x.refresh_token==='string'||typeof x.access_token==='string'));
+const hasLegacy=credentialObject.token&&typeof credentialObject.token==='object'&&
+ (typeof credentialObject.token.refresh_token==='string'||typeof credentialObject.token.access_token==='string')||
+ typeof credentialObject.refresh_token==='string';
+gate(Boolean(hasV3||hasLegacy),'CLASPRC_JSON_NO_OAUTH_TOKEN');
 const auth=path.join(os.homedir(),'.clasprc.json');
 gate(!fs.existsSync(auth),'AUTH_FILE_ALREADY_EXISTS');
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'magasin-cup-t015-'));
