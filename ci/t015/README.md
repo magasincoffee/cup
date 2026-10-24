@@ -11,9 +11,14 @@ Chạy trên GitHub-hosted Ubuntu, không cần H4 hoặc Remote Desktop Command
 1. Bật Apps Script API tại https://script.google.com/home/usersettings .
 2. Trong GitHub, vào https://github.com/magasincoffee/cup/settings/environments rồi tạo Environment **`cup-t015-qa`**. Chỉ cho phép triển khai từ nhánh `main`; chọn yêu cầu Owner phê duyệt khi có thể.
 3. Tạo **Environment Secret** tên **`CLASPRC_JSON`**, giá trị là toàn bộ nội dung file `~/.clasprc.json` từ phiên `clasp login` đã được Google Owner xác thực (ví dụ trên chính máy của bạn). **Không gửi nội dung file này vào cuộc trò chuyện, commit, Issue, PR hoặc email.** Token có quyền cao và cần giữ kín.
-4. Khi workflow đã có trên `main`, vào https://github.com/magasincoffee/cup/actions chọn **MAGASIN CUP T015 isolated QA clasp → Run workflow → preflight**. Pipeline sẽ đọc source QA @3 và HEAD, kiểm tra tất cả điều kiện. Preflight tuyệt đối không gọi `clasp push`.
+4. Khi workflow đã có trên `main`, vào https://github.com/magasincoffee/cup/actions chọn **MAGASIN CUP T015 Owner QA clasp deployment → Run workflow → preflight**. Pipeline sẽ đọc source QA @3 và HEAD, kiểm tra tất cả điều kiện. Preflight tuyệt đối không gọi `clasp push`.
 5. Chỉ khi preflight PASS, mới chọn `deploy` và nhập chính xác `T015_QA_APPROVED`. Xác nhận bước duyệt Environment để pipeline đẩy lên **project T015 QA riêng**, đối chiếu source sau đẩy, rồi tạo một deployment QA mới.
 6. Nghiệm thu giao diện Tồn kho V7 và Trạng thái đơn hàng trên tài khoản Google Owner. **Không chạy lại E2E kho một lần**.
+
+## GitHub-hosted CI đã xác minh
+
+- **MAGASIN CUP T015 source checks** chạy tự động trên `main` và đã PASS bằng GitHub-hosted runner: 12 bài triage + 8 bài kiểm thử patch và kiểm tra cú pháp.
+- **MAGASIN CUP T015 Owner QA clasp deployment** đã chạy job `syntax` PASS, job `owner-qa` được SKIP khi chỉ có push. Job Google chỉ chạy sau `workflow_dispatch` có Owner secret.
 
 ## Hàng rào an toàn
 
