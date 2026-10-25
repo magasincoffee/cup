@@ -1,0 +1,51 @@
+name: CUP V7 NEW QA script — Owner read-only preflight
+on:
+  pull_request:
+    paths:
+      - 'ci/v7/v7-new-script-preflight.mjs'
+      - 'ci/v7/v7-new-script-preflight.test.mjs'
+      - '.github/workflows/v7-new-script-preflight.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ci/v7/v7-new-script-preflight.mjs'
+      - 'ci/v7/v7-new-script-preflight.test.mjs'
+      - '.github/workflows/v7-new-script-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cup-v7-new-qa-owner-readonly-preflight
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check ci/v7/v7-new-script-preflight.mjs
+      - run: node --test ci/v7/v7-new-script-preflight.test.mjs
+      - run: node --test ci/v7/private-owner-read-bridge.test.mjs
+  owner-script-read-only:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: cup-t015-qa
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install -g --ignore-scripts @google/clasp@3.4.1
+      - name: Pull ONLY new standalone V7 QA project, do not push/deploy
+        env:
+          CLASPRC_JSON: \${{ secrets.CLASPRC_JSON }}
+        run: node ci/v7/v7-new-script-preflight.mjs
