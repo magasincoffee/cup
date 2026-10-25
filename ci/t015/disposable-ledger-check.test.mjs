@@ -2,25 +2,25 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {evaluateSnapshot,REQUIRED_HEADERS} from './disposable-ledger-check.mjs';
 const sha='a'.repeat(64);
-const auditId=x=>'AU-'+x;
+const auditId=(x,name)=>'AU-'+x+'-'+name;
 function fixture(){
   const g=Object.fromEntries(Object.entries(REQUIRED_HEADERS).map(([t,h])=>[t,[[...h]]]));
   const obj=(table,row)=>g[table].push(REQUIRED_HEADERS[table].map(k=>row[k]??''));
-  const committed=(id,op='STOCK_RECEIVE')=>obj('idempotency',{
+  const committed=(id,op='STOCK_RECEIPT_SAFE')=>obj('idempotency',{
     request_id:id,operation:op,actor_id:'QA_OWNER',body_hash_sha256:sha,
     processing_state:'COMMITTED',entity_id:'TEST',result_json:'{}',
     started_at_utc:'2026-10-25T00:00:00Z',finished_at_utc:'2026-10-25T00:00:01Z'
   });
-  const aud=(id,name='STOCK_RECEIPT')=>obj('audit',{
-    audit_id:auditId(id),entity_type:'STOCK',entity_id:'TEST',event_type:name,
+  const aud=(id,name='STOCK_RECEIPT_COMMITTED')=>obj('audit',{
+    audit_id:auditId(id,name),entity_type:'STOCK',entity_id:'TEST',event_type:name,
     actor_id:'QA_OWNER',before_json:'{}',after_json:'{}',request_id:id,
     source:'T015-QA',created_at_utc:'2026-10-25T00:00:01Z'
   });
-  committed('REQ-R');aud('REQ-R');
+  committed('REQ-R');aud('REQ-R','STOCK_RECEIPT_PREPARED');aud('REQ-R','STOCK_RECEIPT_COMMITTED');
   obj('movements',{movement_id:'SM-R',sku:'SKU-TEST',movement_type:'RECEIPT',
     quantity:3,unit:'thùng',source_document_id:'T015_FAKE',posting_status:'POSTED',
     approved_by_actor_id:'QA_OWNER',posted_at_utc:'2026-10-25T00:00:01Z',request_id:'REQ-R'});
-  committed('REQ-H','STOCK_RESERVE');aud('REQ-H','STOCK_HOLD');
+  committed('REQ-H','STOCK_RESERVE_SAFE');aud('REQ-H','STOCK_RESERVE_PREPARED');aud('REQ-H','STOCK_RESERVE_COMMITTED');
   obj('reservations',{reservation_id:'SR-H',order_line_id:'DL-TEST',sku:'SKU-TEST',
     unit:'thùng',reserved_qty:2,released_qty:2,status:'RELEASED',revision:3,request_id:'REQ-H'});
   return {g,obj,committed,aud};
@@ -28,7 +28,7 @@ function fixture(){
 function evaluate(change){const f=fixture();if(change)change(f);return evaluateSnapshot(f.g)}
 function has(code,change){const r=evaluate(change);assert.equal(r.ok,false);assert.ok(r.blockers.includes(code),JSON.stringify(r));}
 test('all tab schemas present and synthetic 2 commits accepted',()=>{
- const r=evaluate();assert.equal(r.ok,true);assert.deepEqual(r.counts,{requests:2,unresolved:0,auditEvents:2,stockMovements:1,reservations:1});assert.equal(r.runtimeVerified,false);
+ const r=evaluate();assert.equal(r.ok,true);assert.deepEqual(r.counts,{requests:2,unresolved:0,auditEvents:4,stockMovements:1,reservations:1});assert.equal(r.runtimeVerified,false);
 });
 test('empty snapshot must fail closed',()=>assert.equal(evaluateSnapshot({}).ok,false));
 test('schema drift on request state column must block',()=>has('IDEMPOTENCY_SCHEMA_DRIFT',({g})=>{g.idempotency[0][4]='transaction_state'}));
@@ -36,7 +36,7 @@ test('duplicate request IDs must block',()=>has('JOURNAL_DUPLICATE_ID',({g})=>g.
 test('request with pending state must block',()=>has('UNRESOLVED_REQUESTS',({g})=>{g.idempotency[1][4]='PREPARED'}));
 test('committed missing audit must block',()=>has('COMMITTED_WITHOUT_AUDIT',({g})=>{g.audit=g.audit.slice(0,2)}));
 test('movement without journal ID must block',()=>has('STOCK_MOVEMENT_ORPHAN_JOURNAL',({g})=>{g.movements[1][10]='REQ-NOT-FOUND'}));
-test('movement without audit must block',()=>has('STOCK_MOVEMENT_MISSING_AUDIT',({g})=>{g.audit[1][7]='REQ-NONE'}));
+test('movement without audit must block',()=>has('STOCK_MOVEMENT_MISSING_AUDIT',({g})=>{g.audit[1][7]='REQ-NONE';g.audit[2][7]='REQ-NONE'}));
 test('movement must have valid nonnegative integer',()=>has('INVALID_MOVEMENT_QUANTITY',({g})=>{g.movements[1][3]=-4}));
 test('movement cannot be queued in an accepted snapshot',()=>has('STOCK_MOVEMENT_NOT_POSTED',({g})=>{g.movements[1][7]='PENDING'}));
 test('reservation must belong to a journal request',()=>has('RESERVATION_ORPHAN_JOURNAL',({g})=>{g.reservations[1][8]='REQ-UNKNOWN'}));
@@ -50,4 +50,35 @@ test('invalid hash blocks journal',()=>has('INVALID_JOURNAL_HASH',({g})=>{g.idem
 test('missing commit timestamp blocks',()=>has('COMMITTED_NO_FINISH_TIMESTAMP',({g})=>{g.idempotency[1][8]=''}));
 test('no request payload, actor, or customer data logged by evaluator',()=>{
  const r=evaluate();const output=JSON.stringify(r);assert.ok(!output.includes('QA_OWNER'));assert.ok(!output.includes('DL-TEST'));
+});
+
+test('PREPARED-only audit cannot satisfy a COMMITTED receipt',()=>has('STOCK_COMMITTED_AUDIT_MISSING',({g})=>{
+  g.audit[2][3]='STOCK_RECEIPT_PREPARED';
+}));
+test('a COMMITTED event without PREPARED also fails closed',()=>has('STOCK_PREPARED_AUDIT_MISSING',({g})=>{
+  g.audit[1][3]='STOCK_RECEIPT_COMMITTED';
+}));
+test('an unrelated audit event is not a stock commit proof',()=>has('STOCK_COMMITTED_AUDIT_MISSING',({g})=>{
+  g.audit[2][3]='ORDER_CONFIRMED';
+}));
+test('POSTED receipt must link to the correct journal operation',()=>has('STOCK_MOVEMENT_OPERATION_MISMATCH',({g})=>{
+  g.idempotency[1][1]='STOCK_ISSUE_SAFE';
+}));
+test('reservation must link to reserve journal operation',()=>has('RESERVATION_OPERATION_MISMATCH',({g})=>{
+  g.idempotency[2][1]='STOCK_RELEASE_SAFE';
+}));
+test('stock issue and release both require their exact stage pair',()=>{
+  const f=fixture();
+  f.committed('REQ-I','STOCK_ISSUE_SAFE');
+  f.aud('REQ-I','STOCK_ISSUE_PREPARED');
+  f.aud('REQ-I','STOCK_ISSUE_COMMITTED');
+  f.committed('REQ-L','STOCK_RELEASE_SAFE');
+  f.aud('REQ-L','STOCK_RELEASE_PREPARED');
+  f.aud('REQ-L','STOCK_RELEASE_COMMITTED');
+  const r=evaluateSnapshot(f.g);
+  assert.equal(r.ok,true,JSON.stringify(r.blockers));
+  f.g.audit=f.g.audit.filter((row,i)=>i===0||row[7]!=='REQ-L'||row[3]!=='STOCK_RELEASE_COMMITTED');
+  const fail=evaluateSnapshot(f.g);
+  assert.equal(fail.ok,false);
+  assert.ok(fail.blockers.includes('STOCK_COMMITTED_AUDIT_MISSING'));
 });
