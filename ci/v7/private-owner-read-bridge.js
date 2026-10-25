@@ -184,3 +184,15 @@ function v7OwnerReadSnapshot(request){
    code==='FORBIDDEN'?'FORBIDDEN':'READ_FAILED'};
  }
 }
+
+/** Safe in-editor diagnostic: aggregate-only, no IDs, names, phone or emails. */
+function v7OwnerReadHealth(){
+ var r=v7OwnerReadSnapshot({schema:V7_READ_SCHEMA,operation:V7_READ_OP});
+ if(!r.ok)return {ok:false,error:r.error};
+ var p=r.envelope.payload;
+ return {ok:true,source:'OWNER_QA',readOnly:true,
+  productCount:p.products.length,orderCount:p.orders.length,
+  customerCount:p.customers.length,
+  stockUnknownCount:p.products.filter(function(x){return !x.openingConfirmed}).length,
+  priceReviewCount:p.products.filter(function(x){return x.priceApprovalState!=='APPROVED'}).length};
+}
