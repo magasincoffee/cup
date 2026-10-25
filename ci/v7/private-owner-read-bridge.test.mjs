@@ -8,7 +8,7 @@ const source=readFileSync(new URL("./private-owner-read-bridge.js",import.meta.u
 const bookId="1nfJwdzTA99V9WSL6fdCLpMHCnYHqnUJXp505vOjYAsI";
 const head=names=>names.split("|");
 const rows=()=>({
- "DANH_MUC":[head("SKU|TÊN SẢN PHẨM|CÁI/ĐƠN VỊ|ĐƠN VỊ BÁN|GIÁ 1–9"),["QA-SKU-01","Ly PP mẫu","1000","thùng","670.000 ₫"],["QA-SKU-02","Ly chưa kiểm kê","500","thùng",120000]],
+ "DANH_MUC":[["DANH MỤC QA"],["CHỈ DEMO"],[],head("SKU|TÊN SẢN PHẨM|CÁI/ĐƠN VỊ|ĐƠN VỊ BÁN|GIÁ 1–9"),["QA-SKU-01","Ly PP mẫu","1000","thùng","670.000 ₫"],["QA-SKU-02","Ly chưa kiểm kê","500","thùng",120000]],
  "V7_STOCK_VIEW_QA":[head("SKU|Trạng thái V7|Tồn V7|Đang giữ V7"),["QA-SKU-01","CONFIRMED",12,3],["QA-SKU-02","UNKNOWN","",""]],
  "V7_ORDERS":[head("order_id|customer_id|commercial_state|production_state|delivery_state|payment_status_cache|committed_total_vnd|shipping_policy|created_at_utc"),["QA-ORD-01","QA-CUST-01","COMMITTED","PRINTING","NOT_SCHEDULED","PARTIAL",1000000,"FREE","2026-10-25T04:00:00Z"]],
  "V7_CUSTOMER_PROFILES":[head("customer_id|contact_name|phone"),["QA-CUST-01","Khách QA mô phỏng","0900000000"]],
@@ -25,7 +25,7 @@ function run(overrides={}){
    const grid=tables[n];
    return {
     getLastRow:()=>grid.length,
-    getLastColumn:()=>grid[0].length,
+    getLastColumn:()=>Math.max(...grid.map(row=>row.length)),
     getRange:(r,c,n,columns)=>({
      getValues:()=>grid.slice(r-1,r-1+n).map(row=>row.slice(c-1,c-1+columns))
     })
@@ -113,7 +113,7 @@ test("unconfirmed stock is never guessed as zero even if numeric cells contain 0
 test("confirmed held above on-hand or invalid prices fail closed",()=>{
  const tables=rows();tables.V7_STOCK_VIEW_QA[1][3]=13;
  assert.equal(run({tables}).result.error,"READ_FAILED");
- const noPrice=rows();noPrice.DANH_MUC[1][4]="LIÊN HỆ";
+ const noPrice=rows();noPrice.DANH_MUC[4][4]="LIÊN HỆ";
  assert.equal(run({tables:noPrice}).result.error,"READ_FAILED");
 });
 test("unexpected payment statuses ignored; unknown confirmed entry type rejects",()=>{
