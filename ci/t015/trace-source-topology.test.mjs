@@ -41,7 +41,7 @@ test('missing lease key blocks static gate',()=>{
 });
 test('write calls outside explicit direct sequence stay manual review',()=>{
  const m=fixture();
- m['T015_Health.js']='function write(){x.appendRow([1])}';
+ m['InventoryT015.js']='function write(){x.appendRow([1])}';
  const r=inspectSource(m);
  assert.ok(r.ambiguousWriterFunctions>=1);
 });
