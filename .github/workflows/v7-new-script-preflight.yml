@@ -47,5 +47,5 @@ jobs:
       - run: npm install -g --ignore-scripts @google/clasp@3.4.1
       - name: Pull ONLY new standalone V7 QA project, do not push/deploy
         env:
-          CLASPRC_JSON: \${{ secrets.CLASPRC_JSON }}
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
         run: node ci/v7/v7-new-script-preflight.mjs
