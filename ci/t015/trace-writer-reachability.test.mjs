@@ -64,3 +64,40 @@ test('only aggregate counts and fixed statuses are emitted',()=>{
  assert.equal(out.includes('OAuth'),false);
  assert.equal(r.scriptPropertiesVerified,false);
 });
+
+test('named Owner and lease key constants used by an upstream wrapper are recognized',()=>{
+ const r=inspect(`function entry(){const check=T015_OWNER_EMAIL; const enabled=T015_WRITES_ENABLED;
+ LockService.getScriptLock(); save()} function save(){sheet.appendRow([1])}`);
+ assert.equal(r.writerFunctions,1);
+ assert.equal(r.writersReachableFromAllThreeMarkerTypes,1);
+ assert.equal(r.writersWithoutStaticOwnerMarkerCaller,0);
+});
+test('writer calling a guard helper is reported separately from a guarded caller',()=>{
+ const r=inspect(`function guard(){LockService.getScriptLock();
+ const owner=PropertiesService.getScriptProperties().getProperty('T015_OWNER_EMAIL');
+ const enabled=PropertiesService.getScriptProperties().getProperty('T015_WRITES_ENABLED')}
+ function save(){guard();sheet.appendRow([1])}`);
+ assert.equal(r.writerFunctions,1);
+ assert.equal(r.writersReachableFromAllThreeMarkerTypes,0);
+ assert.equal(r.writersCallingLockReferenceHelper,1);
+ assert.equal(r.writersCallingOwnerKeyReferenceHelper,1);
+ assert.equal(r.writersCallingLeaseKeyReferenceHelper,1);
+ assert.equal(r.writersCallingHelpersCoveringThreeMarkerTypes,1);
+ assert.equal(r.runtimeRecoveryVerified,false);
+});
+test('unrelated helper cannot be claimed as reachable by writer',()=>{
+ const r=inspect(`function guard(){LockService.getScriptLock();const x='T015_OWNER_EMAIL';
+ const y='T015_WRITES_ENABLED'}function save(){sheet.appendRow([1])}`);
+ assert.equal(r.writersCallingOwnerKeyReferenceHelper,0);
+ assert.equal(r.writersCallingLeaseKeyReferenceHelper,0);
+ assert.equal(r.writersCallingLockReferenceHelper,0);
+});
+test('same-function marker references remain unverified and counted independently',()=>{
+ const r=inspect(`function save(){const owner=T015_OWNER_EMAIL;
+ const enabled=T015_WRITES_ENABLED;LockService.getScriptLock();sheet.appendRow([1])}`);
+ assert.equal(r.writersWithDirectOwnerKeyReference,1);
+ assert.equal(r.writersWithDirectLeaseKeyReference,1);
+ assert.equal(r.writersWithDirectLockReference,1);
+ assert.equal(r.scriptPropertiesVerified,false);
+ assert.equal(r.runtimeRecoveryVerified,false);
+});
