@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>MAGASIN CUP · Bản mẫu giao diện POS V7</title>
+<meta name="description" content="Bản mẫu giao diện POS V7 sử dụng dữ liệu giả lập. Chưa kết nối Google Sheets hoặc thanh toán.">
+<link rel="stylesheet" href="./styles.css">
+<script type="module" src="./app.js"></script>
+</head>
+<body>
+<div class="app-layout">
+ <aside class="sidebar" id="sidebar" aria-label="Điều hướng chính">
+  <div class="logo"><span class="logo-icon">M</span><span><strong>MAGASIN CUP</strong><small>Business POS · V7</small></span></div>
+  <div class="sidebar-group">KHÔNG GIAN LÀM VIỆC</div>
+  <nav id="side-nav" class="side-nav" aria-label="Các phân hệ"></nav>
+  <div class="sidebar-footer"><div class="sandbox-dot"></div><div><b>Chế độ xem thử</b><small>Chỉ dữ liệu mô phỏng</small></div></div>
+ </aside>
+ <div class="main-column">
+  <header class="topbar">
+   <button class="menu-toggle" id="menu-toggle" aria-label="Mở menu">☰</button>
+   <div class="crumbs">MAGASIN CUP <span>/</span> <strong id="crumb">Tổng quan</strong></div>
+   <div class="top-actions"><span class="readonly-pill">● DEMO · KHÔNG GHI</span><span class="profile-circle" title="Vai trò mô phỏng — không phải quyền truy cập thực">OW</span></div>
+  </header>
+  <main id="screen" class="screen" tabindex="-1" aria-live="polite"></main>
+  <footer class="bottom-legal">V7 UI PREVIEW · Dữ liệu giả lập · Không kết nối POS V6.4, Google Sheets hoặc tài khoản khách thật</footer>
+ </div>
+</div>
+<nav id="bottom-nav" class="bottom-nav" aria-label="Điều hướng điện thoại"></nav>
+<div class="overlay" id="overlay" hidden></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
