@@ -48,6 +48,9 @@ export function inspectWriterReachability(source){
    walk(fn.body??fn,n=>{
      if(n.type==='Identifier'&&n.name==='LockService')lock=true;
      if(n.type==='Literal'&&typeof n.value==='string')symbols.push(n.value);
+     // Guards often refer to a named constant rather than repeating its string key.
+     if(n.type==='Identifier')symbols.push(n.name);
+     if(n.type==='TemplateElement'&&typeof n.value?.cooked==='string')symbols.push(n.value.cooked);
      if(n.type==='CallExpression'){
        const call=calleeName(n.callee);
        if(MUTATORS.has(call))writes=true;
@@ -73,11 +76,30 @@ export function inspectWriterReachability(source){
    }
    return [...seen].map(i=>entries[i]);
  };
+ // Calling a guard helper is separate from being called by a guarded wrapper.
+ // These are only references; neither direction proves control-flow dominance.
+ const descendants=start=>{
+   const seen=new Set([start]),todo=[start];
+   for(const current of todo)for(const callee of edges[current]){
+     if(!seen.has(callee)){seen.add(callee);todo.push(callee)}
+   }
+   return [...seen].filter(i=>i!==start).map(i=>entries[i]);
+ };
  const writers=entries.flatMap((e,i)=>e.writes?[i]:[]);
  let noLock=0,noOwner=0,noLease=0,bothRefs=0,unnamed=0;
+ let directLock=0,directOwner=0,directLease=0;
+ let downstreamLock=0,downstreamOwner=0,downstreamLease=0;
+ let downstreamAllThree=0;
  for(const i of writers){
-   const a=ancestors(i);
+   const a=ancestors(i),d=descendants(i),self=entries[i];
    const lock=a.some(x=>x.lock),owner=a.some(x=>x.owner),lease=a.some(x=>x.lease);
+   if(self.lock)directLock++;
+   if(self.owner)directOwner++;
+   if(self.lease)directLease++;
+   if(d.some(x=>x.lock))downstreamLock++;
+   if(d.some(x=>x.owner))downstreamOwner++;
+   if(d.some(x=>x.lease))downstreamLease++;
+   if(d.some(x=>x.lock)&&d.some(x=>x.owner)&&d.some(x=>x.lease))downstreamAllThree++;
    if(!lock)noLock++;
    if(!owner)noOwner++;
    if(!lease)noLease++;
@@ -91,6 +113,13 @@ export function inspectWriterReachability(source){
    writersWithoutStaticOwnerMarkerCaller:noOwner,
    writersWithoutStaticLeaseMarkerCaller:noLease,
    writersReachableFromAllThreeMarkerTypes:bothRefs,
+   writersWithDirectLockReference:directLock,
+   writersWithDirectOwnerKeyReference:directOwner,
+   writersWithDirectLeaseKeyReference:directLease,
+   writersCallingLockReferenceHelper:downstreamLock,
+   writersCallingOwnerKeyReferenceHelper:downstreamOwner,
+   writersCallingLeaseKeyReferenceHelper:downstreamLease,
+   writersCallingHelpersCoveringThreeMarkerTypes:downstreamAllThree,
    unnamedWriterFunctions:unnamed,
    ambiguousFunctionNames:ambiguous.size,ambiguousDirectCallSites:unresolvedCalls,
    decision:'STATIC_CALL_GRAPH_TRIAGE_ONLY',
