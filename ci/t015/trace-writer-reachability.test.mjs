@@ -101,3 +101,39 @@ test('same-function marker references remain unverified and counted independentl
  assert.equal(r.scriptPropertiesVerified,false);
  assert.equal(r.runtimeRecoveryVerified,false);
 });
+
+test('script-property-only mutations are separate from stock-sheet writers',()=>{
+ const r=inspect(`function updateGate(){props.setProperty('T015_WRITES_ENABLED','FALSE')}`);
+ assert.equal(r.writerFunctions,1);
+ assert.equal(r.possibleSpreadsheetWriterFunctions,0);
+ assert.equal(r.propertyMutationFunctions,1);
+ assert.equal(r.propertyOnlyWriterFunctions,1);
+ assert.equal(r.mixedPropertyAndSpreadsheetWriterFunctions,0);
+});
+test('mixed spreadsheet and property mutation is counted in both categories',()=>{
+ const r=inspect(`function updateBoth(){sheet.setValues([[1]]);props.setProperties({A:'1'})}`);
+ assert.equal(r.writerFunctions,1);
+ assert.equal(r.possibleSpreadsheetWriterFunctions,1);
+ assert.equal(r.propertyMutationFunctions,1);
+ assert.equal(r.propertyOnlyWriterFunctions,0);
+ assert.equal(r.mixedPropertyAndSpreadsheetWriterFunctions,1);
+});
+test('property deletion counts as a configuration mutation, not stock',()=>{
+ const r=inspect('function revoke(){props.deleteProperty("T015_WRITES_ENABLED")}');
+ assert.equal(r.writerFunctions,1);
+ assert.equal(r.possibleSpreadsheetWriterFunctions,0);
+ assert.equal(r.propertyMutationFunctions,1);
+});
+test('stock append without property mutation is sheet-only',()=>{
+ const r=inspect('function post(){stock.appendRow([1])}');
+ assert.equal(r.writerFunctions,1);
+ assert.equal(r.possibleSpreadsheetWriterFunctions,1);
+ assert.equal(r.propertyMutationFunctions,0);
+});
+test('classification output never includes operation data or secrets',()=>{
+ const r=inspect('function post(){const secret="SENSITIVE_MARKER";stock.appendRow([secret])}');
+ const serialized=JSON.stringify(r);
+ assert.equal(serialized.includes('SENSITIVE_MARKER'),false);
+ assert.equal(serialized.includes('function post'),false);
+ assert.equal(r.runtimeRecoveryVerified,false);
+});
