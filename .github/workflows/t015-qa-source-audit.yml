@@ -1,0 +1,50 @@
+name: MAGASIN CUP T015 immutable QA source audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/t015-qa-source-audit.yml'
+      - 'ci/t015/source-audit*.mjs'
+      - 'ci/t015/run-source-audit.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/t015-qa-source-audit.yml'
+      - 'ci/t015/source-audit*.mjs'
+      - 'ci/t015/run-source-audit.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cup-t015-google-owner-qa
+  cancel-in-progress: false
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test ci/t015/source-audit.test.mjs
+      - run: node --check ci/t015/run-source-audit.mjs
+  read-owner-qa:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: cup-t015-qa
+    env:
+      CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install -g --ignore-scripts @google/clasp@3.4.1
+      - name: Read immutable T015 QA at version 4, never write
+        run: node ci/t015/run-source-audit.mjs
