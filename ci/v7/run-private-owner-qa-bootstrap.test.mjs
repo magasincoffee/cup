@@ -15,6 +15,20 @@ test("empty Apps Script starter is accepted and never treated as source code to 
  assert.deepEqual(validatePristineScript(empty()),{safe:true,existingFiles:2});
  assert.deepEqual(validatePristineScript([{name:"appsscript.json",content:"{}"}]),{safe:true,existingFiles:1});
 });
+test("Vietnamese default Mã.gs exported as Mã.js is allowed only when pristine",()=>{
+ const localized=empty().map(x=>x.name==="Code.js"?{...x,name:"Mã.js"}:x);
+ assert.deepEqual(validatePristineScript(localized),{safe:true,existingFiles:2});
+ localized[0].content="function important(){return 7}";
+ refuses(()=>validatePristineScript(localized),"REMOTE_SOURCE_NOT_EMPTY");
+});
+test("localized and English default stubs cannot coexist; unexpected files remain blocked",()=>{
+ const both=empty();
+ both.push({name:"Mã.js",content:"function myFunction() {}"});
+ refuses(()=>validatePristineScript(both),"REMOTE_MULTIPLE_STARTER_FILES");
+ const unexpected=empty();
+ unexpected[0].name="Other.js";
+ refuses(()=>validatePristineScript(unexpected),"REMOTE_HAS_EXISTING_SOURCE");
+});
 test("any existing project code blocks installation",()=>{
  let files=empty();files[0].content="function important(){return 7}";
  refuses(()=>validatePristineScript(files),"REMOTE_SOURCE_NOT_EMPTY");
