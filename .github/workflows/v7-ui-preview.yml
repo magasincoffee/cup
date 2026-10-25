@@ -3,11 +3,15 @@ on:
   pull_request:
     paths:
       - 'v7-preview/**'
+      - 'ci/v7/private-owner-read-bridge.js'
+      - 'ci/v7/private-owner-read-bridge.test.mjs'
       - '.github/workflows/v7-ui-preview.yml'
   push:
     branches: [main]
     paths:
       - 'v7-preview/**'
+      - 'ci/v7/private-owner-read-bridge.js'
+      - 'ci/v7/private-owner-read-bridge.test.mjs'
       - '.github/workflows/v7-ui-preview.yml'
 permissions:
   contents: read
@@ -30,3 +34,5 @@ jobs:
           node --test v7-preview/logic.test.mjs
           node --check v7-preview/read-contract.js
           node --test v7-preview/read-contract.test.mjs
+          node --check ci/v7/private-owner-read-bridge.js
+          node --test ci/v7/private-owner-read-bridge.test.mjs
