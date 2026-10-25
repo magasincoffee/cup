@@ -31,13 +31,15 @@ function product(row){
  if(!isPlainObject(row)||!isString(row.sku,72)||!isString(row.name,180)||
   !isString(row.pack,100)||!isString(row.unit,30)||!isMoney(row.priceVnd)||
   typeof row.openingConfirmed!=="boolean")reject("PRODUCT_INVALID");
+ const priceApprovalState=row.priceApprovalState===undefined?"REVIEW_REQUIRED":row.priceApprovalState;
+ if(priceApprovalState!=="APPROVED"&&priceApprovalState!=="REVIEW_REQUIRED")reject("PRICE_APPROVAL_INVALID");
  if(row.openingConfirmed){
   if(!isMoney(row.onHand)||!isMoney(row.held))reject("CONFIRMED_STOCK_INVALID");
  } else {
   if(row.onHand!==null||row.held!==null)reject("UNKNOWN_STOCK_MUST_BE_NULL");
  }
  return Object.freeze({sku:row.sku,name:row.name,pack:row.pack,unit:row.unit,
-  priceVnd:row.priceVnd,openingConfirmed:row.openingConfirmed,
+  priceVnd:row.priceVnd,priceApprovalState,openingConfirmed:row.openingConfirmed,
   onHand:row.onHand,held:row.held});
 }
 function order(row){

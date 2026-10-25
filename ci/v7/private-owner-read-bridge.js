@@ -89,7 +89,7 @@ function v7_qAuthorize(){
 function v7_qBuildEnvelope(book){
  if(book.getName()!==V7_QA_EXPECTED_TITLE)v7_qFail('FORBIDDEN');
  var cat=v7_qSheets(book,'DANH_MUC',
-   ['SKU','TÊN SẢN PHẨM','CÁI/ĐƠN VỊ','ĐƠN VỊ BÁN','GIÁ 1–9'],4);
+   ['SKU','TÊN SẢN PHẨM','CÁI/ĐƠN VỊ','ĐƠN VỊ BÁN','GIÁ 1–9','TRẠNG THÁI GIÁ'],4);
  var stock=v7_qSheets(book,'V7_STOCK_VIEW_QA',
    ['SKU','Trạng thái V7','Tồn V7','Đang giữ V7'],1);
  var ordersRaw=v7_qSheets(book,'V7_ORDERS',
@@ -124,6 +124,8 @@ function v7_qBuildEnvelope(book){
    pack:v7_qText(c['CÁI/ĐƠN VỊ'],100)+' cái/'+v7_qText(c['ĐƠN VỊ BÁN'],30),
    unit:v7_qText(c['ĐƠN VỊ BÁN'],30),
    priceVnd:v7_qMoney(c['GIÁ 1–9'],false),
+   // Price remains reference-only unless catalog explicitly says ĐÃ DUYỆT.
+   priceApprovalState:v7_qStr(c['TRẠNG THÁI GIÁ']).toUpperCase()==='ĐÃ DUYỆT'?'APPROVED':'REVIEW_REQUIRED',
    openingConfirmed:confirmed,onHand:onHand,held:held
   };
  });
