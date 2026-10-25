@@ -1,0 +1,54 @@
+name: MAGASIN CUP T015 transaction source flow audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/t015-source-flow-audit.yml'
+      - 'ci/t015/trace-source-topology.mjs'
+      - 'ci/t015/trace-source-topology.test.mjs'
+      - 'ci/t015/run-source-flow-audit.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/t015-source-flow-audit.yml'
+      - 'ci/t015/trace-source-topology.mjs'
+      - 'ci/t015/trace-source-topology.test.mjs'
+      - 'ci/t015/run-source-flow-audit.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cup-t015-google-owner-qa
+  cancel-in-progress: false
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --ignore-scripts --no-audit --no-fund --package-lock=false acorn@8.15.0
+      - run: node --test ci/t015/trace-source-topology.test.mjs
+      - run: node --check ci/t015/run-source-flow-audit.mjs
+  owner-read-only:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: cup-t015-qa
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --ignore-scripts --no-audit --no-fund --package-lock=false acorn@8.15.0
+      - run: npm install -g --ignore-scripts @google/clasp@3.4.1
+      - name: Inspect private source structure without executing Apps Script
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: node ci/t015/run-source-flow-audit.mjs
