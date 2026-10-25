@@ -8,7 +8,7 @@ const source=readFileSync(new URL("./private-owner-read-bridge.js",import.meta.u
 const bookId="1nfJwdzTA99V9WSL6fdCLpMHCnYHqnUJXp505vOjYAsI";
 const head=names=>names.split("|");
 const rows=()=>({
- "DANH_MUC":[["DANH MỤC QA"],["CHỈ DEMO"],[],head("SKU|TÊN SẢN PHẨM|CÁI/ĐƠN VỊ|ĐƠN VỊ BÁN|GIÁ 1–9"),["QA-SKU-01","Ly PP mẫu","1000","thùng","670.000 ₫"],["QA-SKU-02","Ly chưa kiểm kê","500","thùng",120000]],
+ "DANH_MUC":[["DANH MỤC QA"],["CHỈ DEMO"],[],head("SKU|TÊN SẢN PHẨM|CÁI/ĐƠN VỊ|ĐƠN VỊ BÁN|GIÁ 1–9|TRẠNG THÁI GIÁ"),["QA-SKU-01","Ly PP mẫu","1000","thùng","670.000 ₫","ĐÃ DUYỆT"],["QA-SKU-02","Ly chưa kiểm kê","500","thùng",120000,"CHƯA DUYỆT"]],
  "V7_STOCK_VIEW_QA":[head("SKU|Trạng thái V7|Tồn V7|Đang giữ V7"),["QA-SKU-01","CONFIRMED",12,3],["QA-SKU-02","UNKNOWN","",""]],
  "V7_ORDERS":[head("order_id|customer_id|commercial_state|production_state|delivery_state|payment_status_cache|committed_total_vnd|shipping_policy|created_at_utc"),["QA-ORD-01","QA-CUST-01","COMMITTED","PRINTING","NOT_SCHEDULED","PARTIAL",1000000,"FREE","2026-10-25T04:00:00Z"]],
  "V7_CUSTOMER_PROFILES":[head("customer_id|contact_name|phone"),["QA-CUST-01","Khách QA mô phỏng","0900000000"]],
@@ -59,6 +59,8 @@ test("authorized read maps actual QA header structure into contract",()=>{
  assert.equal(data.source,"OWNER_QA");
  assert.equal(data.products.length,2);
  assert.equal(data.products[0].priceVnd,670000);
+ assert.equal(data.products[0].priceApprovalState,"APPROVED");
+ assert.equal(data.products[1].priceApprovalState,"REVIEW_REQUIRED");
  assert.equal(data.products[0].onHand,12);
  assert.equal(data.products[0].held,3);
  assert.equal(data.products[1].openingConfirmed,false);
@@ -138,4 +140,10 @@ test("source contains no Apps Script mutation or deployment operations",()=>{
  assert.ok(!/\.\s*(?:appendRow|setValue|setValues|setProperty|setProperties|deleteRow|clearContent|insertRowAfter|createFile)\s*\(/.test(source));
  assert.ok(!/google\.script\.run|UrlFetchApp|MailApp|DriveApp|doGet\s*\(|doPost\s*\(/.test(source));
  assert.ok(!source.includes("owner@example.invalid"));
+});
+
+test("unrecognized catalog approval values remain unapproved, not silently approved",()=>{
+ const t=rows();t.DANH_MUC[4][5]="";
+ const x=run({tables:t});assert.equal(x.result.ok,true);
+ assert.equal(x.result.envelope.payload.products[0].priceApprovalState,"REVIEW_REQUIRED");
 });
