@@ -98,3 +98,11 @@ test("public source-code has no active API calls and remains synthetic",()=>{
  assert.ok(!/\bfetch\s*\(|google\.script\.run|XMLHttpRequest|localStorage|sessionStorage/.test(contract+app));
  assert.ok(!/https:\/\/script\.google\.com\/macros/.test(contract+app));
 });
+
+test("catalog price approvals fail closed while missing old metadata stays review-required",()=>{
+ const missing=demo();delete missing.payload.products[0].priceApprovalState;
+ assert.equal(validateReadEnvelope(missing).products[0].priceApprovalState,"REVIEW_REQUIRED");
+ const bad=demo();bad.payload.products[0].priceApprovalState="CHECKED_BY_STAFF";
+ fails(()=>validateReadEnvelope(bad),"PRICE_APPROVAL_INVALID");
+ const approved=demo();assert.equal(validateReadEnvelope(approved).products[0].priceApprovalState,"APPROVED");
+});
