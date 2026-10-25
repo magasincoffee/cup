@@ -4,7 +4,7 @@ import {evaluateSnapshot,REQUIRED_HEADERS} from './disposable-ledger-check.mjs';
 const sha='a'.repeat(64);
 const auditId=x=>'AU-'+x;
 function fixture(){
-  const g=Object.fromEntries(Object.entries(REQUIRED_HEADERS).map(([t,h])=>[t,[h]]));
+  const g=Object.fromEntries(Object.entries(REQUIRED_HEADERS).map(([t,h])=>[t,[[...h]]]));
   const obj=(table,row)=>g[table].push(REQUIRED_HEADERS[table].map(k=>row[k]??''));
   const committed=(id,op='STOCK_RECEIVE')=>obj('idempotency',{
     request_id:id,operation:op,actor_id:'QA_OWNER',body_hash_sha256:sha,
