@@ -1,5 +1,9 @@
 import {calculateQuote,derivePaymentStatus,stockAvailability,vnd,escapeHtml as esc} from "./logic.js";
-import {products,orders,customers} from "./fixtures.js";
+import {products as demoProducts,orders as demoOrders,customers as demoCustomers} from "./fixtures.js";
+import {createDemoEnvelope,validateReadEnvelope} from "./read-contract.js";
+// Public Pages only consumes a validated, synthetic envelope. A future QA bridge
+// must be hosted behind server-side authentication, never on public Pages.
+const {products,orders,customers}=validateReadEnvelope(createDemoEnvelope({products:demoProducts,orders:demoOrders,customers:demoCustomers}));
 const tabs=[["dashboard","Tổng quan","▦"],["sales","Bán hàng","▣"],["orders","Đơn hàng","▤"],["customers","Khách hàng","♙"],["inventory","Kho hàng","▥"],["debt","Công nợ","◷"],["reports","Báo cáo","◫"],["settings","Cài đặt","⚙"]];
 const state={tab:"dashboard",cart:[],customer:"",shippingMode:"PENDING",shippingFeeVnd:0,printFeeVnd:0,discountVnd:0,searchProduct:"",searchOrders:"",orderFilter:"ALL",searchCustomers:"",searchStock:""};
 const el=id=>document.getElementById(id);
