@@ -48,7 +48,7 @@ function run(overrides={}){
  };
  vm.createContext(sandbox);
  vm.runInContext(source,sandbox,{timeout:1000});
- const request=overrides.request??{schema:READ_SCHEMA,operation:READ_OPERATION};
+ const request=Object.prototype.hasOwnProperty.call(overrides,"request")?overrides.request:{schema:READ_SCHEMA,operation:READ_OPERATION};
  return {result:sandbox.v7OwnerReadSnapshot(request),accessAttempts:attempts};
 }
 test("authorized read maps actual QA header structure into contract",()=>{
