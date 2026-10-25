@@ -18,6 +18,14 @@ function rowsFrom(grid,expected,table,errors){
   return grid.slice(1).filter(row=>Array.isArray(row)&&row.some(x=>x!==''&&x!==null&&x!==undefined))
     .map(row=>Object.fromEntries(hdr.map((h,i)=>[h,row[i]??''])));
 }
+// Only these verified stock operations have a fixed two-stage audit protocol.
+// Do not treat a PREPARED-only event as proof of a COMMITTED stock request.
+const stockAuditStages = Object.freeze({
+  STOCK_RECEIPT_SAFE:'STOCK_RECEIPT',
+  STOCK_RESERVE_SAFE:'STOCK_RESERVE',
+  STOCK_ISSUE_SAFE:'STOCK_ISSUE',
+  STOCK_RELEASE_SAFE:'STOCK_RELEASE'
+});
 function numeric(v){const n=Number(v);return v!==''&&v!==null&&v!==undefined&&Number.isSafeInteger(n)?n:null}
 const uniqueKey=(rows,key,tag,errors)=>{
   const ids=new Set();
@@ -41,12 +49,24 @@ export function evaluateSnapshot(grids) {
   uniqueKey(holds,'reservation_id','RESERVATION',errors);
   const byId=new Map(ids.map(r=>[String(r.request_id),r]));
   const auditedIds=new Set(audit.map(a=>String(a.request_id)));
+  const auditStages=new Map();
+  for(const row of audit){
+    const id=String(row.request_id);
+    if(!auditStages.has(id))auditStages.set(id,new Set());
+    auditStages.get(id).add(String(row.event_type));
+  }
   const unresolved=ids.filter(r=>r.processing_state!=='COMMITTED');
   if(unresolved.length)errors.push('UNRESOLVED_REQUESTS');
   for(const row of ids){
     if(row.processing_state==='COMMITTED'){
       if(!row.finished_at_utc)errors.push('COMMITTED_NO_FINISH_TIMESTAMP');
       if(!auditedIds.has(String(row.request_id)))errors.push('COMMITTED_WITHOUT_AUDIT');
+      const stockStage=stockAuditStages[String(row.operation)];
+      if(stockStage){
+        const stages=auditStages.get(String(row.request_id))||new Set();
+        if(!stages.has(stockStage+'_PREPARED'))errors.push('STOCK_PREPARED_AUDIT_MISSING');
+        if(!stages.has(stockStage+'_COMMITTED'))errors.push('STOCK_COMMITTED_AUDIT_MISSING');
+      }
     }
     if(!row.body_hash_sha256||String(row.body_hash_sha256).length!==64)errors.push('INVALID_JOURNAL_HASH');
   }
@@ -56,7 +76,14 @@ export function evaluateSnapshot(grids) {
     const q=numeric(m.quantity);
     if(q===null||q<=0)errors.push('INVALID_MOVEMENT_QUANTITY');
     if(!byId.has(String(m.request_id)))errors.push('STOCK_MOVEMENT_ORPHAN_JOURNAL');
-    else if(byId.get(String(m.request_id)).processing_state!=='COMMITTED')errors.push('STOCK_MOVEMENT_PENDING_JOURNAL');
+    else {
+      const journal=byId.get(String(m.request_id));
+      if(journal.processing_state!=='COMMITTED')errors.push('STOCK_MOVEMENT_PENDING_JOURNAL');
+      const expected=m.movement_type==='RECEIPT'?'STOCK_RECEIPT_SAFE':
+        m.movement_type==='ISSUE'?'STOCK_ISSUE_SAFE':null;
+      if(expected&&String(journal.operation)!==expected)
+        errors.push('STOCK_MOVEMENT_OPERATION_MISMATCH');
+    }
     if(!auditedIds.has(String(m.request_id)))errors.push('STOCK_MOVEMENT_MISSING_AUDIT');
   }
   for(const r of holds){
@@ -66,7 +93,12 @@ export function evaluateSnapshot(grids) {
     if(!['ACTIVE','RELEASED'].includes(String(r.status)))errors.push('RESERVATION_STATE_REQUIRES_REVIEW');
     if(r.status==='RELEASED'&&held!==released)errors.push('RELEASED_RESERVATION_NOT_SETTLED');
     if(!byId.has(String(r.request_id)))errors.push('RESERVATION_ORPHAN_JOURNAL');
-    else if(byId.get(String(r.request_id)).processing_state!=='COMMITTED')errors.push('RESERVATION_PENDING_JOURNAL');
+    else {
+      const journal=byId.get(String(r.request_id));
+      if(journal.processing_state!=='COMMITTED')errors.push('RESERVATION_PENDING_JOURNAL');
+      if(String(journal.operation)!=='STOCK_RESERVE_SAFE')
+        errors.push('RESERVATION_OPERATION_MISMATCH');
+    }
     if(!auditedIds.has(String(r.request_id)))errors.push('RESERVATION_MISSING_AUDIT');
   }
   return {ok:errors.length===0,blockers:[...new Set(errors)].sort(),
