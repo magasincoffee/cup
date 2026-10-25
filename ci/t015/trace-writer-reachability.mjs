@@ -4,8 +4,11 @@
  * transaction ordering or crash recovery.
  */
 import {parse} from 'acorn';
-const MUTATORS=new Set(['appendRow','setValue','setValues','setProperty','setProperties',
+// A script-property change is not evidence of a spreadsheet/stock write.
+// Both remain potential mutation surfaces, classified conservatively by method name.
+const SHEET_MUTATORS=new Set(['appendRow','setValue','setValues',
  'deleteRow','deleteRows','insertRowBefore','insertRowsAfter','clear','clearContent','copyTo']);
+const PROPERTY_MUTATORS=new Set(['setProperty','setProperties','deleteProperty','deleteAllProperties']);
 const isFunction=n=>n&&['FunctionDeclaration','FunctionExpression','ArrowFunctionExpression'].includes(n.type);
 const calleeName=n=>n?.type==='Identifier'?n.name:n?.type==='MemberExpression'?
   (n.computed?(n.property?.type==='Literal'?String(n.property.value):''):n.property?.name)||'':'';
@@ -44,7 +47,7 @@ export function inspectWriterReachability(source){
   walk(ast,n=>{if(isFunction(n)&&!discovered.has(n))discovered.set(n,null)});
   for(const [fn,name] of discovered){
    const calls=[],symbols=[];
-   let writes=false,lock=false,owner=false,lease=false;
+   let writes=false,sheetWrites=false,propertyWrites=false,lock=false,owner=false,lease=false;
    walk(fn.body??fn,n=>{
      if(n.type==='Identifier'&&n.name==='LockService')lock=true;
      if(n.type==='Literal'&&typeof n.value==='string')symbols.push(n.value);
@@ -53,13 +56,14 @@ export function inspectWriterReachability(source){
      if(n.type==='TemplateElement'&&typeof n.value?.cooked==='string')symbols.push(n.value.cooked);
      if(n.type==='CallExpression'){
        const call=calleeName(n.callee);
-       if(MUTATORS.has(call))writes=true;
+       if(SHEET_MUTATORS.has(call)){writes=true;sheetWrites=true}
+       if(PROPERTY_MUTATORS.has(call)){writes=true;propertyWrites=true}
        if(n.callee.type==='Identifier')calls.push(call);
      }
    },{skipNested:true});
    owner=symbols.some(s=>s.includes('T015_OWNER_EMAIL'));
    lease=symbols.some(s=>s.includes('T015_WRITES_ENABLED')||s.includes('T015_WRITE_LEASE_UNTIL'));
-   entries.push({name,file,calls,writes,lock,owner,lease});
+   entries.push({name,file,calls,writes,sheetWrites,propertyWrites,lock,owner,lease});
   }
  }
  const named=new Map();
@@ -86,6 +90,8 @@ export function inspectWriterReachability(source){
    return [...seen].filter(i=>i!==start).map(i=>entries[i]);
  };
  const writers=entries.flatMap((e,i)=>e.writes?[i]:[]);
+ const sheetWriters=writers.filter(i=>entries[i].sheetWrites);
+ const propertyWriters=writers.filter(i=>entries[i].propertyWrites);
  let noLock=0,noOwner=0,noLease=0,bothRefs=0,unnamed=0;
  let directLock=0,directOwner=0,directLease=0;
  let downstreamLock=0,downstreamOwner=0,downstreamLease=0;
@@ -109,6 +115,10 @@ export function inspectWriterReachability(source){
  const unresolvedCalls=entries.reduce((n,e)=>n+e.calls.filter(call=>ambiguous.has(call)).length,0);
  return {
    inspectedFunctions:entries.length,writerFunctions:writers.length,
+   possibleSpreadsheetWriterFunctions:sheetWriters.length,
+   propertyMutationFunctions:propertyWriters.length,
+   propertyOnlyWriterFunctions:propertyWriters.filter(i=>!entries[i].sheetWrites).length,
+   mixedPropertyAndSpreadsheetWriterFunctions:propertyWriters.filter(i=>entries[i].sheetWrites).length,
    writersWithoutStaticLockCaller:noLock,
    writersWithoutStaticOwnerMarkerCaller:noOwner,
    writersWithoutStaticLeaseMarkerCaller:noLease,
