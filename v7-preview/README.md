@@ -44,3 +44,41 @@ Run Node.js 22:
    guard and reconciliation gates before enabling any mutations.
 5. Full production V7 release requires cross-module signed-in E2E plus
    rollback plan. Never cut over production based on UI preview CI alone.
+
+## Versioned read-only snapshot boundary (T018 / T019 / T022 / T023 / T024)
+
+The public UI validates a `magasin-cup.v7.read.v1` envelope before rendering.
+It continues to use only `DEMO_PUBLIC` fixtures. No Apps Script URL or
+Google API is called from public GitHub Pages.
+
+The future Owner QA transport uses the operation `READ_SNAPSHOT_V1` and
+returns an object containing `ok: true` and `envelope` with the fields:
+`schema`, `source: OWNER_QA`, `readOnly: true`, `revision`, `issuedAt`,
+and `payload: {products: [], orders: [], customers: []}`.
+
+Product fields: `sku`, `name`, `pack`, `unit`, integer `priceVnd`,
+boolean `openingConfirmed`, `onHand`, `held`. When not confirmed, both
+stock quantities **must be null**, not zero. Orders: `id`, `customer`,
+`brand`, `phase`, `payment`, nullable `total`, integer `received`,
+`ship`, `date`. Customers: `id`, `name`, `brand`, optional `phone`,
+nullable integer `debt`.
+
+A **private** Apps Script bridge must authorize the Owner at the server,
+reject a blank/missing identity, map only read APIs on a dedicated QA
+workbook and return fresh data. It must not include write APIs.
+An `OWNER_QA` string or `allowPrivateQa` flag in JavaScript is NOT
+authentication. Never send this response into public GitHub Pages, logs,
+screenshots or third-party analytics. Do not commit private identifiers.
+
+The client intentionally rejects mismatched schema, stale QA data,
+duplicates, invalid money, unknown stock incorrectly replaced by zero,
+and AUTH_REQUIRED/FORBIDDEN responses. It never uses partial snapshots.
+
+### QA handoff (not yet performed)
+
+1. Review actual QA Apps Script read API signatures and deployment identity.
+2. Build a private server-side bridge with strict Owner authorization.
+3. Inject that read-only transport into an Owner-only QA HTML context.
+4. Test signed-in read views, empty data, unauthorized access and privacy.
+5. Keep public Pages in DEMO mode and all mutation buttons disabled.
+6. Require additional write/fault/rollback gates before releasing V7.

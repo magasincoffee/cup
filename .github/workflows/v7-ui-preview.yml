@@ -28,3 +28,5 @@ jobs:
           node --check v7-preview/logic.js
           node --check v7-preview/fixtures.js
           node --test v7-preview/logic.test.mjs
+          node --check v7-preview/read-contract.js
+          node --test v7-preview/read-contract.test.mjs
