@@ -1,6 +1,6 @@
 # MAGASIN CUP V7 QA — dự án Apps Script mới
 
-**Trạng thái:** Chỉ chuẩn bị trình cài an toàn. **Chưa chạy workflow Owner; chưa cài mã; chưa triển khai Web App.**
+**Trạng thái:** Đã có Owner preflight nhưng lần #5 bị chặn do tên mặc định `Mã.gs` theo giao diện tiếng Việt; đã bổ sung kiểm tra chính xác tên tương ứng `Mã.js` khi clasp pull. **Chưa cài mã; chưa triển khai Web App.**
 
 Đã xác minh qua Drive metadata: có dự án mới tên `MAGASIN CUP V7 QA` ngày 25/10/2026.
 Vì mã dự án không phải credential nhưng không cần công khai thêm, trình cài chỉ lưu SHA-256 đối chiếu ID trong nguồn công khai. Người dùng nhập ID dự án tại GitHub Actions khi chạy.
@@ -31,7 +31,7 @@ Trong Apps Script editor của dự án V7 QA, người có quyền Owner có th
 - Chỉ đúng Script ID có SHA-256 đã định; không thể dùng nhầm T015 hoặc V6.4.
 - Chỉ `workflow_dispatch` trên main mới được tiếp xúc secret `CLASPRC_JSON` của môi trường GitHub `cup-t015-qa`.
 - `preflight` mặc định; `install` đòi câu xác nhận chính xác và protected environment.
-- Remote chỉ có `appsscript.json` và tùy chọn `Code.js` mặc định mới được thay.
+- Remote chỉ có `appsscript.json` và tối đa một tệp khởi tạo trống có tên `Code.js` hoặc `Mã.js` (tương ứng `Code.gs` / `Mã.gs` trong Apps Script) mới được thay; nội dung bắt buộc chỉ là `myFunction` rỗng. Tên khác, mã nghiệp vụ hay cả hai tệp cùng tồn tại đều bị từ chối.
 - Không ghi Google Sheet, không execute Apps Script, không deploy web app, không tự bật quyền ghi.
 - Nếu OAuth không truy cập được dự án, workflow sẽ FAILED mà không ghi; lúc đó cần Owner trực tiếp nhập mã trong Apps Script editor hoặc kết nối một phiên trình duyệt được ủy quyền.
 
@@ -42,3 +42,6 @@ Trong Apps Script editor của dự án V7 QA, người có quyền Owner có th
 3. Kiểm tra negative account/blank ActiveUser và response đúng contract.
 4. Giao diện QA PRIVATE tích hợp adapter; public Pages tuyệt đối không gọi API chứa khách thật.
 5. Các workflow ghi đơn/kho/thu tiền chỉ được mở khi RBAC, idempotency, giao dịch kho T015 và lỗi phục hồi đã nghiệm thu. V6.4 giữ nguyên.
+## Tình huống 25/10: Mã.gs theo ngôn ngữ trình chỉnh sửa
+
+Run https://github.com/magasincoffee/cup/actions/runs/40200199147 kết thúc `REMOTE_HAS_EXISTING_SOURCE`, chỉ đọc, không ghi. Ảnh Owner cho thấy đúng một `Mã.gs` chứa `function myFunction() {}` và không có chức năng POS khác nhìn thấy. Cần **chạy lại preflight trên main sau khi bản sửa được merge** để xác minh toàn bộ manifest và file set thực tế; ảnh riêng không thay thế được preflight. Không chạy `install` cho tới khi log `V7_QA_PREFLIGHT_PASS_NO_WRITES` xuất hiện.
