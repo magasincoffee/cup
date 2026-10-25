@@ -1,0 +1,30 @@
+name: MAGASIN CUP V7 UI preview checks
+on:
+  pull_request:
+    paths:
+      - 'v7-preview/**'
+      - '.github/workflows/v7-ui-preview.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'v7-preview/**'
+      - '.github/workflows/v7-ui-preview.yml'
+permissions:
+  contents: read
+jobs:
+  preview-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and pure business rules
+        run: |
+          node --check v7-preview/app.js
+          node --check v7-preview/logic.js
+          node --check v7-preview/fixtures.js
+          node --test v7-preview/logic.test.mjs
