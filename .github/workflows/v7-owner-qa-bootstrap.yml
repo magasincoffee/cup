@@ -1,0 +1,74 @@
+name: MAGASIN CUP V7 new Owner QA script bootstrap
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/v7-owner-qa-bootstrap.yml'
+      - 'ci/v7/run-private-owner-qa-bootstrap.mjs'
+      - 'ci/v7/run-private-owner-qa-bootstrap.test.mjs'
+      - 'ci/v7/private-owner-qa-selfcheck.js'
+      - 'ci/v7/private-owner-read-bridge.js'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v7-owner-qa-bootstrap.yml'
+      - 'ci/v7/run-private-owner-qa-bootstrap.mjs'
+      - 'ci/v7/run-private-owner-qa-bootstrap.test.mjs'
+      - 'ci/v7/private-owner-qa-selfcheck.js'
+      - 'ci/v7/private-owner-read-bridge.js'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Preflight checks project without writes; install adds read-only source
+        type: choice
+        required: true
+        default: preflight
+        options: [preflight, install]
+      script_id:
+        description: Script ID of your new MAGASIN CUP V7 QA project (no URL)
+        type: string
+        required: true
+      confirm:
+        description: For install only, type INSTALL_V7_QA_READ_ONLY
+        type: string
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: cup-v7-owner-qa-bootstrap
+  cancel-in-progress: false
+jobs:
+  qa-bootstrap-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check ci/v7/private-owner-qa-selfcheck.js
+      - run: node --check ci/v7/run-private-owner-qa-bootstrap.mjs
+      - run: node --test ci/v7/run-private-owner-qa-bootstrap.test.mjs
+  owner-script:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: qa-bootstrap-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: cup-t015-qa
+    env:
+      V7_MODE: ${{ inputs.mode }}
+      V7_SCRIPT_ID: ${{ inputs.script_id }}
+      V7_INSTALL_CONFIRM: ${{ inputs.confirm }}
+      CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --global --ignore-scripts @google/clasp@3.4.1
+      - name: Inspect pristine project or install only read-only source
+        run: node ci/v7/run-private-owner-qa-bootstrap.mjs
