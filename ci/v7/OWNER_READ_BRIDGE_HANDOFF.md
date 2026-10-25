@@ -49,3 +49,8 @@ Do not loosen permissions, set access to ANYONE or deploy execute-as-Owner publi
   or Warehouse roles. Future RBAC must be checked server-side separately.
 - Physical stock vs legacy column divergence must be reconciled before live use.
 - No automatic execution, deployment, or retrospective PASS is claimed.
+## Catalog price-approval status (QA metadata recheck)
+- Live disposable QA reference catalog currently has 130 product SKUs; 4 prices marked `ĐÃ DUYỆT`, 126 `CHƯA DUYỆT` (read-only inspection 25/10/2026).
+- The bridge maps `ĐÃ DUYỆT` => `priceApprovalState: APPROVED`; all other/missing states => `REVIEW_REQUIRED`.
+- Both groups retain the reference price for display/negotiation; neither is authorization to commit an order. Source price approval is a separate business rule, not a server-side write permission.
+- UI labels unapproved reference prices visibly. Production price-management policy remains unverified.
