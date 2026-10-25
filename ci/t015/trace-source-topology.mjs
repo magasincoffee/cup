@@ -50,6 +50,12 @@ export function inspectSource(map){
   if(typeof map[file]!=='string')throw Error('T015_SOURCE_TRACE_MISSING_FILE');
   const ast=parse(map[file],{ecmaVersion:'latest',sourceType:'script',
     allowReturnOutsideFunction:true});
+  // Include top-level state constants as well as function-scoped literals.
+  traverse(ast,n=>{
+    const value=n.type==='Literal'?n.value:n.type==='Identifier'?n.name:null;
+    if(typeof value==='string')for(const key of markerTokens)
+      if(value.includes(key))report.markers[key]=true;
+  });
   const moduleResult={file,functions:0,mutators:0,lockReferences:0,
    idempotencyMarkers:0,manualSequenceReview:0};
   let functions=[];
