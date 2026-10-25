@@ -8,6 +8,8 @@ on:
       - 'ci/t015/trace-source-topology.test.mjs'
       - 'ci/t015/trace-writer-reachability.mjs'
       - 'ci/t015/trace-writer-reachability.test.mjs'
+      - 'ci/t015/trace-script-property-guards.mjs'
+      - 'ci/t015/trace-script-property-guards.test.mjs'
       - 'ci/t015/run-source-flow-audit.mjs'
   pull_request:
     paths:
@@ -16,6 +18,8 @@ on:
       - 'ci/t015/trace-source-topology.test.mjs'
       - 'ci/t015/trace-writer-reachability.mjs'
       - 'ci/t015/trace-writer-reachability.test.mjs'
+      - 'ci/t015/trace-script-property-guards.mjs'
+      - 'ci/t015/trace-script-property-guards.test.mjs'
       - 'ci/t015/run-source-flow-audit.mjs'
   workflow_dispatch:
 permissions:
@@ -37,6 +41,7 @@ jobs:
       - run: npm install --no-save --ignore-scripts --no-audit --no-fund --package-lock=false acorn@8.15.0
       - run: node --test ci/t015/trace-source-topology.test.mjs
       - run: node --test ci/t015/trace-writer-reachability.test.mjs
+      - run: node --test ci/t015/trace-script-property-guards.test.mjs
       - run: node --check ci/t015/run-source-flow-audit.mjs
   owner-read-only:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
