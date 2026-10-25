@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {inspectSource} from './trace-source-topology.mjs';
 import {inspectWriterReachability} from './trace-writer-reachability.mjs';
+import {inspectScriptPropertyGuards} from './trace-script-property-guards.mjs';
 const SCRIPT='1Ywd72VfivnefEJMAZQ42ojw0QlfjyM1CUsbqlOJQnMkebamiZPAwvMM5';
 const BOOK='1nfJwdzTA99V9WSL6fdCLpMHCnYHqnUJXp505vOjYAsI';
 const OLD_BOOK='1tot2RNXprYLkoOVXDi5j3yyavHyxI_ayR78KdP1Wzuo';
@@ -37,6 +38,7 @@ try{
  const source=Object.fromEntries(files.filter(x=>x.endsWith('.js')).map(x=>[x,fs.readFileSync(path.join(target,x),'utf8')]));
  const scan=inspectSource(source);
  const callGraph=inspectWriterReachability(source);
+ const configGuards=inspectScriptPropertyGuards(source);
  // Only fixed filenames and counts are printed: never source or property contents.
  const safe={
   decision:scan.decision,moduleCount:scan.modules.length,totalFunctions:scan.totalFunctions,
@@ -51,6 +53,7 @@ try{
  };
  console.log('T015_STATIC_DISPOSABLE_TRANSACTION_TRACE '+JSON.stringify(safe));
  console.log('T015_STATIC_CALLER_COVERAGE '+JSON.stringify(callGraph));
+ console.log('T015_PROPERTY_GUARD_SOURCE_TRIAGE '+JSON.stringify(configGuards));
  console.log('SOURCE_FILESET_HASH_PREFIX '+nameHash);
  console.log('NOTE: semantic marker order is heuristic; interfunction journal paths need source review');
  gate(scan.decision==='STATIC_TOPOLOGY_ONLY','REQUIRED_MARKERS_MISSING');
