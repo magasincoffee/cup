@@ -14,6 +14,8 @@ import {fileURLToPath} from 'node:url';
 
 const APPROVED_SHA256='a52b18dbc14f39d0fcf8dbee74c40446180d13cdc2b08504fa2372925b5beca1';
 const MAX_SOURCE_FILES=3;
+// Apps Script creates `Mã.gs` under Vietnamese locales; clasp pulls it as `Mã.js`.
+const STARTER_FILES=new Set(['Code.js','Mã.js']);
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const BRIDGE=path.join(ROOT,'ci/v7/private-owner-read-bridge.js');
 const DIAGNOSTIC=path.join(ROOT,'ci/v7/private-owner-qa-selfcheck.js');
@@ -34,8 +36,10 @@ export function validatePristineScript(files){
   'REMOTE_FILE_COUNT');
  const names=files.map(x=>x.name).sort();
  gate(names.includes('appsscript.json'),'MANIFEST_MISSING');
- gate(names.every(x=>x==='appsscript.json'||x==='Code.js'),'REMOTE_HAS_EXISTING_SOURCE');
- const code=files.find(x=>x.name==='Code.js')?.content||'';
+ gate(names.every(x=>x==='appsscript.json'||STARTER_FILES.has(x)),'REMOTE_HAS_EXISTING_SOURCE');
+ const starters=names.filter(x=>STARTER_FILES.has(x));
+ gate(starters.length<=1,'REMOTE_MULTIPLE_STARTER_FILES');
+ const code=files.find(x=>x.name===starters[0])?.content||'';
  gate(/^\s*(?:function\s+myFunction\s*\(\s*\)\s*\{\s*\}\s*;?\s*)?$/.test(code),
   'REMOTE_SOURCE_NOT_EMPTY');
  let manifest;
@@ -108,9 +112,9 @@ function execute(){
    console.log('V7_QA_PREFLIGHT_PASS_NO_WRITES');
    return;
   }
-  // Preserve the native manifest; replace only the initial empty Code.js.
-  const placeholder=path.join(remote,'Code.js');
-  if(fs.existsSync(placeholder))fs.unlinkSync(placeholder);
+  // Preserve the native manifest; replace only the verified default empty stub.
+  const existingStub=previous.find(x=>STARTER_FILES.has(x.name));
+  if(existingStub)fs.unlinkSync(path.join(remote,existingStub.name));
   const newFiles=[
    ['V7_QA_ReadBridge.js',bridge],
    ['V7_QA_SelfCheck.js',diagnostic]
