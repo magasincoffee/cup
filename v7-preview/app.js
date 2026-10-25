@@ -44,7 +44,8 @@ function catalog(){
  return matchingProduct().map(p=>{
   const stock=stockAvailability(p);
   const label=stock.state==="UNKNOWN"?"Chưa kiểm kê":stock.state==="RECONCILE"?"Cần đối soát":stock.state==="OUT"?"Hết hàng":"Khả dụng: "+stock.available+" "+p.unit;
-  return '<button class="product" data-add="'+esc(p.sku)+'"><span class="product-graphic">▱</span><span class="product-info"><strong>'+esc(p.name)+'</strong><small>'+esc(p.sku)+' · '+esc(p.pack)+'</small><small>'+esc(label)+'</small></span><span class="product-price">'+vnd(p.priceVnd)+'<div class="hint">+ Thêm</div></span></button>';
+  const needsApproval=p.priceApprovalState!=="APPROVED";
+  return '<button class="product" data-add="'+esc(p.sku)+'"><span class="product-graphic">▱</span><span class="product-info"><strong>'+esc(p.name)+'</strong><small>'+esc(p.sku)+' · '+esc(p.pack)+'</small><small>'+esc(label)+'</small>'+(needsApproval?'<small style="color:#a36a19;font-weight:800">Giá tham khảo · Chưa duyệt</small>':'')+'</span><span class="product-price">'+vnd(p.priceVnd)+'<div class="hint">+ Thêm</div></span></button>';
  }).join("")||'<div class="empty">Không có sản phẩm mẫu phù hợp.</div>';
 }
 function quote(){
@@ -53,7 +54,7 @@ function quote(){
 }
 function cartLine(c){
  const p=products.find(x=>x.sku===c.sku);
- return '<div class="cart-line"><div class="cart-line-top"><div><strong>'+esc(p?.name||c.sku)+'</strong><small>'+esc(c.sku)+' · '+esc(p?.pack||"")+'</small></div><button class="remove" data-remove="'+esc(c.sku)+'" aria-label="Xóa khỏi giỏ">×</button></div>'+
+ return '<div class="cart-line"><div class="cart-line-top"><div><strong>'+esc(p?.name||c.sku)+'</strong><small>'+esc(c.sku)+' · '+esc(p?.pack||"")+'</small>'+(p?.priceApprovalState!=="APPROVED"?'<small style="color:#a36a19;font-weight:800">Giá danh mục chưa được duyệt — cần xác nhận giá chốt</small>':'')+'</div><button class="remove" data-remove="'+esc(c.sku)+'" aria-label="Xóa khỏi giỏ">×</button></div>'+
  '<div class="inline-fields"><div class="field"><label>Số thùng/bao</label><input class="input" type="number" min="1" step="1" data-qty="'+esc(c.sku)+'" value="'+c.quantity+'"></div>'+
  '<div class="field"><label>Giá chốt / ĐVT (VNĐ)</label><input class="input" type="number" min="0" step="1" data-price="'+esc(c.sku)+'" value="'+c.unitPriceVnd+'"></div></div>'+
  row("Thành tiền",vnd(c.quantity*c.unitPriceVnd))+'</div>';
