@@ -1,0 +1,43 @@
+name: MAGASIN CUP V7 browser preview QA
+on:
+  pull_request:
+    paths:
+      - 'v7-preview/**'
+      - 'ci/v7/**'
+      - '.github/workflows/v7-browser-preview.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'v7-preview/**'
+      - 'ci/v7/**'
+      - '.github/workflows/v7-browser-preview.yml'
+permissions:
+  contents: read
+jobs:
+  chromium-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated browser tooling
+        run: |
+          npm install --no-save --ignore-scripts --no-audit --no-fund --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Start isolated static server and run desktop/mobile smoke
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/cup-v7-server.log 2>&1 &
+          sleep 2
+          node ci/v7/browser-smoke.mjs
+      - name: Preserve synthetic preview screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7-preview-desktop-mobile
+          path: artifacts/v7-preview/
+          if-no-files-found: ignore
+          retention-days: 7
