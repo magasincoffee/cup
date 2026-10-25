@@ -1,0 +1,66 @@
+name: MAGASIN CUP T015 disposable fault QA bootstrap
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/t015-disposable-bootstrap.yml'
+      - 'ci/t015/disposable-prepare.mjs'
+      - 'ci/t015/disposable-prepare.test.mjs'
+      - 'ci/t015/run-disposable-bootstrap.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/t015-disposable-bootstrap.yml'
+      - 'ci/t015/disposable-prepare.mjs'
+      - 'ci/t015/disposable-prepare.test.mjs'
+      - 'ci/t015/run-disposable-bootstrap.mjs'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Preflight read-only, or create NEW isolated fault-test Script
+        type: choice
+        required: true
+        default: preflight
+        options: [preflight, create]
+      confirm:
+        description: To create, enter CREATE_T015_DISPOSABLE
+        type: string
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: cup-t015-disposable-fault-qa
+  cancel-in-progress: false
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test ci/t015/disposable-prepare.test.mjs
+      - run: node --check ci/t015/run-disposable-bootstrap.mjs
+  isolated-script:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    environment: cup-t015-qa
+    env:
+      ACTION_MODE: ${{ inputs.mode }}
+      CREATE_CONFIRM: ${{ inputs.confirm }}
+      CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install -g --ignore-scripts @google/clasp@3.4.1
+      - name: Preflight or create new disposable script only
+        run: node ci/t015/run-disposable-bootstrap.mjs
