@@ -49,7 +49,7 @@ function run(overrides={}){
  vm.createContext(sandbox);
  vm.runInContext(source,sandbox,{timeout:1000});
  const request=Object.prototype.hasOwnProperty.call(overrides,"request")?overrides.request:{schema:READ_SCHEMA,operation:READ_OPERATION};
- return {result:sandbox.v7OwnerReadSnapshot(request),accessAttempts:attempts};
+ return {result:sandbox.v7OwnerReadSnapshot(request),accessAttempts:attempts,health:()=>sandbox.v7OwnerReadHealth()};
 }
 test("authorized read maps actual QA header structure into contract",()=>{
  const {result,accessAttempts}=run();
@@ -146,4 +146,17 @@ test("unrecognized catalog approval values remain unapproved, not silently appro
  const t=rows();t.DANH_MUC[4][5]="";
  const x=run({tables:t});assert.equal(x.result.ok,true);
  assert.equal(x.result.envelope.payload.products[0].priceApprovalState,"REVIEW_REQUIRED");
+});
+
+test("in-editor health reports aggregates only without customer identities",()=>{
+ const info=run().health();
+ assert.deepEqual(JSON.parse(JSON.stringify(info)),{
+  ok:true,source:"OWNER_QA",readOnly:true,
+  productCount:2,orderCount:1,customerCount:1,
+  stockUnknownCount:1,priceReviewCount:1
+ });
+ const serialized=JSON.stringify(info);
+ for(const sensitive of ["QA-SKU","QA-CUST","0900000000","owner@example.invalid","Thương hiệu mẫu"])
+  assert.equal(serialized.includes(sensitive),false);
+ assert.deepEqual(JSON.parse(JSON.stringify(run({active:""}).health())),{ok:false,error:"AUTH_REQUIRED"});
 });
