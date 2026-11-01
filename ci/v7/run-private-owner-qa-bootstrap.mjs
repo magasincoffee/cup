@@ -51,6 +51,25 @@ export function validatePristineScript(files){
   'REMOTE_MANIFEST_NOT_PRISTINE');
  return {safe:true,existingFiles:names.length};
 }
+// A previously installed read bridge may be verified, but NEVER overwritten.
+// This strict verification is preflight-only and checks exact local source hashes.
+export function validateExistingReadOnlyScript(files,bridge,diagnostic){
+ gate(Array.isArray(files)&&files.length===3,'EXISTING_FILESET_MISMATCH');
+ const names=files.map(x=>x.name).sort();
+ gate(JSON.stringify(names)===JSON.stringify(['V7_QA_ReadBridge.js','V7_QA_SelfCheck.js','appsscript.json'].sort()),
+  'EXISTING_FILESET_MISMATCH');
+ const manifestFile=files.find(x=>x.name==='appsscript.json');
+ let manifest;
+ try{manifest=JSON.parse(manifestFile.content)}catch{gate(false,'REMOTE_MANIFEST_INVALID')}
+ gate(manifest&&typeof manifest==='object'&&!Array.isArray(manifest)&&
+  !manifest.webapp&&!manifest.executionApi&&!manifest.addOns&&!manifest.oauthScopes,
+  'REMOTE_MANIFEST_NOT_PRISTINE');
+ const currentBridge=files.find(x=>x.name==='V7_QA_ReadBridge.js').content;
+ const currentDiagnostic=files.find(x=>x.name==='V7_QA_SelfCheck.js').content;
+ gate(sha256(currentBridge)===sha256(bridge),'EXISTING_BRIDGE_HASH_MISMATCH');
+ gate(sha256(currentDiagnostic)===sha256(diagnostic),'EXISTING_SELFCHECK_HASH_MISMATCH');
+ return {safe:true,installed:true};
+}
 export function validateReadOnlySources(bridge,diagnostic){
  for(const code of [bridge,diagnostic]){
   gate(typeof code==='string'&&code.length>200,'LOCAL_SOURCE_MISSING');
@@ -102,12 +121,20 @@ function execute(){
   }
   clasp(remote,env,['pull']);
   const previous=listProject(remote);
-  validatePristineScript(previous);
-  console.log('V7_QA_PRISTINE_PROJECT_CONFIRMED; SOURCE_WRITE=false');
   const bridge=fs.readFileSync(BRIDGE,'utf8');
   const diagnostic=fs.readFileSync(DIAGNOSTIC,'utf8');
   validateReadOnlySources(bridge,diagnostic);
   console.log('V7_QA_READ_ONLY_SOURCE_VALIDATED');
+  const alreadyInstalled=previous.some(x=>x.name==='V7_QA_ReadBridge.js'||x.name==='V7_QA_SelfCheck.js');
+  if(alreadyInstalled){
+   gate(mode==='preflight','EXISTING_SOURCE_INSTALL_FORBIDDEN');
+   validateExistingReadOnlyScript(previous,bridge,diagnostic);
+   console.log('V7_QA_EXISTING_READ_SOURCE_HASH_PASS_NO_WRITES');
+   console.log('V7_QA_PREFLIGHT_PASS_NO_WRITES');
+   return;
+  }
+  validatePristineScript(previous);
+  console.log('V7_QA_PRISTINE_PROJECT_CONFIRMED; SOURCE_WRITE=false');
   if(mode==='preflight'){
    console.log('V7_QA_PREFLIGHT_PASS_NO_WRITES');
    return;
