@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import crypto from "node:crypto";
-import {validateTarget,validatePristineScript,validateReadOnlySources} from "./run-private-owner-qa-bootstrap.mjs";
+import {validateTarget,validatePristineScript,validateReadOnlySources,validateExistingReadOnlyScript} from "./run-private-owner-qa-bootstrap.mjs";
 
 const empty=()=>[
  {name:"Code.js",content:"function myFunction() {\n\n}\n"},
@@ -68,4 +68,23 @@ test("bootstrap has no source auto-push on CI and limits installs to pristine Sc
  assert.ok(!source.includes("ScriptApp.newDeployment"));
  const digest=crypto.createHash("sha256").update("test-only").digest("hex");
  assert.equal(digest.length,64);
+});
+
+test("already installed QA source is accepted only when exact read-only hashes match",()=>{
+ const files=[
+  {name:"appsscript.json",content:JSON.stringify({timeZone:"Asia/Ho_Chi_Minh",runtimeVersion:"V8"})},
+  {name:"V7_QA_ReadBridge.js",content:bridge},
+  {name:"V7_QA_SelfCheck.js",content:selfcheck}
+ ];
+ assert.deepEqual(validateExistingReadOnlyScript(files,bridge,selfcheck),{safe:true,installed:true});
+ refuses(()=>validateExistingReadOnlyScript(files,bridge+" ",selfcheck),"EXISTING_BRIDGE_HASH_MISMATCH");
+ refuses(()=>validateExistingReadOnlyScript(files,bridge,selfcheck+" "),"EXISTING_SELFCHECK_HASH_MISMATCH");
+ refuses(()=>validateExistingReadOnlyScript([...files,{name:"Unexpected.js",content:""}],bridge,selfcheck),"EXISTING_FILESET_MISMATCH");
+ const webapp=files.map(x=>x.name==="appsscript.json"?{...x,content:JSON.stringify({webapp:{access:"ANYONE"}})}:x);
+ refuses(()=>validateExistingReadOnlyScript(webapp,bridge,selfcheck),"REMOTE_MANIFEST_NOT_PRISTINE");
+});
+test("existing source can never reach the install push path",()=>{
+ const source=readFileSync(new URL("./run-private-owner-qa-bootstrap.mjs",import.meta.url),"utf8");
+ assert.ok(source.includes("gate(mode==='preflight','EXISTING_SOURCE_INSTALL_FORBIDDEN')"));
+ assert.ok(source.includes("V7_QA_EXISTING_READ_SOURCE_HASH_PASS_NO_WRITES"));
 });
