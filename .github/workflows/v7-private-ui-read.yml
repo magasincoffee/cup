@@ -1,0 +1,28 @@
+name: V7 private QA read controller offline tests
+on:
+  pull_request:
+    paths:
+      - 'ci/v7/private-owner-ui-controller.mjs'
+      - 'ci/v7/private-owner-ui-controller.test.mjs'
+      - '.github/workflows/v7-private-ui-read.yml'
+      - 'v7-preview/read-contract.js'
+  push:
+    branches: [main]
+    paths:
+      - 'ci/v7/private-owner-ui-controller.mjs'
+      - 'ci/v7/private-owner-ui-controller.test.mjs'
+      - '.github/workflows/v7-private-ui-read.yml'
+      - 'v7-preview/read-contract.js'
+permissions:
+  contents: read
+jobs:
+  private-read-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test ci/v7/private-owner-ui-controller.test.mjs
