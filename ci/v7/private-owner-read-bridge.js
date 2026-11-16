@@ -118,7 +118,7 @@ function v7_qBuildEnvelope(book){
  });
  // Do not use a last-write-wins lookup for source identifiers.
  v7_qMapBy(cat,'SKU');
- v7_qMapBy(ordersRaw,'order_id');
+ var orderIndex=v7_qMapBy(ordersRaw,'order_id');
  v7_qMapBy(brands,'brand_id');
  var products=cat.map(function(c){
   var sku=v7_qText(c.SKU,72), entry=stockIndex[sku];
@@ -141,6 +141,9 @@ function v7_qBuildEnvelope(book){
  ledger.forEach(function(p){
   if(v7_qStr(p.status).toUpperCase()!=='CONFIRMED')return;
   var orderId=v7_qText(p.order_id,72);
+  // A confirmed ledger entry without a matching order cannot be reconciled.
+  if(!Object.prototype.hasOwnProperty.call(orderIndex,orderId))
+   v7_qFail('READ_PAYMENT_RECONCILIATION_REQUIRED');
   var kind=v7_qStr(p.entry_type).toUpperCase();
   var amount=v7_qMoney(p.amount_vnd,false);
   if(kind==='RECEIPT')receipts[orderId]=(receipts[orderId]||0)+amount;
