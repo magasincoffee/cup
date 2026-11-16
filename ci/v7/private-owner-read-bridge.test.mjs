@@ -167,3 +167,17 @@ test("duplicate product SKU, order ID and brand ID reject before returning a sna
   assert.deepEqual(JSON.parse(JSON.stringify(r.result)),{ok:false,error:"READ_FAILED"});
  }
 });
+
+test("confirmed ledger receipt for missing order fails closed without partial snapshot",()=>{
+ const tables=rows();
+ tables.V7_PAYMENT_LEDGER.push(["QA-MISSING-ORDER","RECEIPT",50000,"CONFIRMED"]);
+ const r=run({tables});
+ assert.deepEqual(JSON.parse(JSON.stringify(r.result)),{ok:false,error:"READ_FAILED"});
+});
+test("unconfirmed legacy ledger entry is ignored pending reconciliation",()=>{
+ const tables=rows();
+ tables.V7_PAYMENT_LEDGER.push(["QA-MISSING-ORDER","RECEIPT",50000,"PENDING"]);
+ const r=run({tables});
+ assert.equal(r.result.ok,true);
+ assert.equal(r.result.envelope.payload.orders[0].received,350000);
+});
