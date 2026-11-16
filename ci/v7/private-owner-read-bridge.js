@@ -51,7 +51,11 @@ function v7_qSheets(book,title,required,headerRow){
  if(!values.length)v7_qFail('READ_SCHEMA_INVALID');
  var header=values.shift().map(function(x){return v7_qStr(x)});
  var indexes={};
- header.forEach(function(k,i){if(k)indexes[k]=i});
+ header.forEach(function(k,i){
+  if(!k)return;
+  if(Object.prototype.hasOwnProperty.call(indexes,k))v7_qFail('READ_SCHEMA_INVALID');
+  indexes[k]=i;
+ });
  required.forEach(function(k){if(indexes[k]===undefined)v7_qFail('READ_SCHEMA_INVALID')});
  var rows=[];
  values.forEach(function(line){
@@ -112,6 +116,10 @@ function v7_qBuildEnvelope(book){
       b.is_primary===true||v7_qStr(b.is_primary).toUpperCase()==='TRUE')
    primaryBrands[cid]=v7_qStr(b.brand_name);
  });
+ // Do not use a last-write-wins lookup for source identifiers.
+ v7_qMapBy(cat,'SKU');
+ v7_qMapBy(ordersRaw,'order_id');
+ v7_qMapBy(brands,'brand_id');
  var products=cat.map(function(c){
   var sku=v7_qText(c.SKU,72), entry=stockIndex[sku];
   var confirmed=!!entry&&v7_qStr(entry['Trạng thái V7']).toUpperCase()==='CONFIRMED';

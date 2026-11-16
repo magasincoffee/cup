@@ -147,3 +147,23 @@ test("unrecognized catalog approval values remain unapproved, not silently appro
  const x=run({tables:t});assert.equal(x.result.ok,true);
  assert.equal(x.result.envelope.payload.products[0].priceApprovalState,"REVIEW_REQUIRED");
 });
+
+// P0 fail-closed checks: ambiguous source identifiers must never produce a partial snapshot.
+test("duplicate column labels reject a source sheet even when required labels exist",()=>{
+ const tables=rows();tables.V7_ORDERS[0].push("order_id");
+ tables.V7_ORDERS[1].push("QA-ORD-02");
+ const r=run({tables});
+ assert.deepEqual(JSON.parse(JSON.stringify(r.result)),{ok:false,error:"READ_FAILED"});
+});
+test("duplicate product SKU, order ID and brand ID reject before returning a snapshot",()=>{
+ const variants=[
+  t=>t.DANH_MUC.push([...t.DANH_MUC[4]]),
+  t=>t.V7_ORDERS.push([...t.V7_ORDERS[1]]),
+  t=>t.V7_CUSTOMER_BRANDS.push([...t.V7_CUSTOMER_BRANDS[1]])
+ ];
+ for(const modify of variants){
+  const tables=rows();modify(tables);
+  const r=run({tables});
+  assert.deepEqual(JSON.parse(JSON.stringify(r.result)),{ok:false,error:"READ_FAILED"});
+ }
+});
